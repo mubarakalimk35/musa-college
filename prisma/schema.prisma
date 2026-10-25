@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admission {
+  id          Int      @id @default(autoincrement())
+  program     String
+  studentName String
+  fatherName  String
+  dob         String
+  cnic        String
+  religion    String
+  nationality String
+  domicile    String
+  mobile      String
+  address     String   @db.Text
+  createdAt   String
+  status      String   @default("PENDING")
+
+  @@map("admissions")
+}
