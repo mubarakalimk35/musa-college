@@ -11,25 +11,30 @@ export async function POST(req: Request) {
     
     const createdAt = `${date} ${time}`;
 
+    // Check body empty to nahi
+    if (!body.studentName || !body.cnic) {
+      return NextResponse.json({ success: false, error: "Name and CNIC required" }, { status: 400 });
+    }
+
     const admission = await prisma.admission.create({
       data: {
-        program: body.program,
+        program: body.program || "",
         studentName: body.studentName,
-        fatherName: body.fatherName,
-        dob: body.dob,
+        fatherName: body.fatherName || "",
+        dob: body.dob || "",
         cnic: body.cnic,
-        religion: body.religion,
-        nationality: body.nationality,
-        domicile: body.domicile,
-        mobile: body.mobile,
-        address: body.address,
+        religion: body.religion || "",
+        nationality: body.nationality || "",
+        domicile: body.domicile || "",
+        mobile: body.mobile || "",
+        address: body.address || "",
         createdAt: createdAt,
-        status: "Pending",
+        status: "PENDING",
       }
     });
     return NextResponse.json({ success: true, data: admission });
   } catch (error: any) {
-    console.error(error);
+    console.error("SAVE ERROR FULL:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
