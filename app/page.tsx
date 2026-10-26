@@ -7,51 +7,44 @@ import Stats from "./components/Stats";
 import Programs from "./components/Programs";
 import NewsAndEvents from "./components/NewsAndEvents";
 import PrincipalMessage from "./components/PrincipalMessage";
-import FacultySection from "./components/FacultySection";
-import FacultyModal from "./components/FacultyModal";
-import Downloads from "./components/Downloads";
-import Gallery from "./components/Gallery";
 import Alumni from "./components/Alumni";
-import NoticeTicker from "./components/NoticeTicker";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
-import AdmissionForm from "./components/AdmissionForm";
 
 const images = ["/hero1.jpeg", "/hero2.jpeg", "/hero3.jpeg", "/hero4.jpeg", "/hero5.jpeg"];
 
 export default function Home() {
   const [current, setCurrent] = useState(0);
-  const [showForm, setShowForm] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [cnic, setCnic] = useState("");
-  const [cnicError, setCnicError] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [selectedFaculty, setSelectedFaculty] = useState<any>(null);
   const router = useRouter();
+
+  const goToApply = () => {
+    router.push('/apply');
+  };
 
   useEffect(() => {
     const timer = setInterval(() => { setCurrent((prev) => (prev + 1) % images.length); }, 3000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    if (showForm || selectedFaculty) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "auto";
-  }, [showForm, selectedFaculty]);
-
-  const handleCnicChange = (e: any) => {
-    const value = e.target.value.replace(/\D/g, "");
-    if (value.length <= 13) { setCnic(value); setCnicError(value.length > 0 && value.length !== 13 ? "CNIC must be exactly 13 digits without dashes" : ""); }
-  };
-  const handleSubmit = (e: any) => {
-    e.preventDefault();
-    if (cnic.length !== 13) { setCnicError("CNIC must be exactly 13 digits"); return; }
-    setSubmitted(true); setTimeout(() => { setShowForm(false); setSubmitted(false); setCnic(""); }, 3000);
-  };
   
   const scrollTo = (id: string) => {
     if (id === 'about') {
       router.push('/about');
+      setMobileMenu(false);
+      return;
+    }
+    if (id === 'downloads') {
+      router.push('/downloads');
+      setMobileMenu(false);
+      return;
+    }
+    if (id === 'gallery') {
+      router.push('/gallery');
+      setMobileMenu(false);
+      return;
+    }
+    if (id === 'faculty') {
+      router.push('/faculty');
       setMobileMenu(false);
       return;
     }
@@ -82,27 +75,17 @@ export default function Home() {
         @media (max-width: 768px) {
           .mobile-black{ color:#000 !important; -webkit-text-fill-color:#000 !important; opacity:1 !important; }
         }
-        .form-input{ background:#fff !important; color:#000 !important; -webkit-text-fill-color:#000 !important; }
-        .form-input::placeholder{ color:#9ca3af !important; -webkit-text-fill-color:#9ca3af !important; }
       `}</style>
 
-      <Navbar scrollTo={scrollTo} mobileMenu={mobileMenu} setMobileMenu={setMobileMenu} setShowForm={setShowForm} />
-      <div className="sticky top-[88px] md:top-[96px] z-40">
-        <NoticeTicker />
-      </div>
-      <Hero images={images} current={current} setShowForm={setShowForm} scrollTo={scrollTo} />
+      <Navbar scrollTo={scrollTo} mobileMenu={mobileMenu} setMobileMenu={setMobileMenu} setShowForm={goToApply} />
+      <Hero images={images} current={current} setShowForm={goToApply} scrollTo={scrollTo} />
       <Stats />
       <Programs />
       <NewsAndEvents />
       <PrincipalMessage />
-      <FacultySection setSelectedFaculty={setSelectedFaculty} />
-      <FacultyModal selectedFaculty={selectedFaculty} setSelectedFaculty={setSelectedFaculty} />
-      <Downloads />
-      <Gallery />
       <Alumni />
       <Contact />
       <Footer />
-      <AdmissionForm showForm={showForm} setShowForm={setShowForm} submitted={submitted} cnic={cnic} cnicError={cnicError} handleCnicChange={handleCnicChange} handleSubmit={handleSubmit} />
 
       {/* WhatsApp */}
       <a

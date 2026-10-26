@@ -24,17 +24,13 @@ export default function NewsAndEvents() {
 
   useEffect(() => {
     if (pausedNews) return;
-    const timer = setInterval(() => {
-      setNewsIndex((prev) => (prev + 1) % newsData.length);
-    }, 3000);
+    const timer = setInterval(() => { setNewsIndex((prev) => (prev + 1) % newsData.length); }, 3000);
     return () => clearInterval(timer);
   }, [pausedNews]);
 
   useEffect(() => {
     if (pausedEvent) return;
-    const timer = setInterval(() => {
-      setEventIndex((prev) => (prev + 1) % eventsData.length);
-    }, 3500);
+    const timer = setInterval(() => { setEventIndex((prev) => (prev + 1) % eventsData.length); }, 3500);
     return () => clearInterval(timer);
   }, [pausedEvent]);
 
@@ -48,86 +44,42 @@ export default function NewsAndEvents() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* NEWS - Slide Up */}
           <div className="bg-white rounded-2xl shadow border overflow-hidden">
             <div className="bg-[#0d2a54] text-white p-4 flex justify-between items-center">
               <h3 className="font-black text-sm flex items-center gap-2"><span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>Latest News</h3>
               <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full">Auto Sliding</span>
             </div>
-            <div 
-              className="h-[320px] relative overflow-hidden"
-              onMouseEnter={() => setPausedNews(true)}
-              onMouseLeave={() => setPausedNews(false)}
-            >
-              <div 
-                className="transition-transform duration-700 ease-in-out"
-                style={{ transform: `translateY(-${newsIndex * 80}px)` }}
-              >
+            <div className="h-[320px] relative overflow-hidden" onMouseEnter={() => setPausedNews(true)} onMouseLeave={() => setPausedNews(false)}>
+              <div className="transition-transform duration-700 ease-in-out" style={{ transform: `translateY(-${newsIndex * 80}px)` }}>
                 {[...newsData, ...newsData].map((news, i) => (
                   <div key={i} className="h-[80px] p-4 flex gap-3 border-b border-gray-100 hover:bg-gray-50">
-                    <div className="shrink-0">
-                      <p className="text-[10px] font-bold text-gray-400">{news.date}</p>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 inline-block ${news.color}`}>{news.tag}</span>
-                    </div>
+                    <div className="shrink-0"><p className="text-[10px] font-bold text-gray-400">{news.date}</p><span className={`text-[9px] font-black px-2 py-0.5 rounded-full mt-1 inline-block ${news.color}`}>{news.tag}</span></div>
                     <p className="text-[13px] font-bold text-gray-800 leading-tight line-clamp-2">{news.title}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="p-3 flex justify-center gap-1.5 bg-gray-50">
-              {newsData.map((_, i) => (
-                <div key={i} className={`w-1.5 h-1.5 rounded-full transition ${i === newsIndex ? 'bg-blue-700 w-6' : 'bg-gray-300'}`}></div>
-              ))}
-            </div>
+            <div className="p-3 flex justify-center gap-1.5 bg-gray-50">{newsData.map((_, i) => (<div key={i} className={`w-1.5 h-1.5 rounded-full transition ${i === newsIndex ? 'bg-blue-700 w-6' : 'bg-gray-300'}`}></div>))}</div>
           </div>
 
-          {/* EVENTS - Slide Up */}
           <div className="bg-white rounded-2xl shadow border overflow-hidden">
             <div className="bg-green-700 text-white p-4 flex justify-between items-center">
               <h3 className="font-black text-sm flex items-center gap-2"><span className="w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></span>Upcoming Events</h3>
               <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full">Auto Sliding</span>
             </div>
-            <div 
-              className="h-[320px] relative overflow-hidden"
-              onMouseEnter={() => setPausedEvent(true)}
-              onMouseLeave={() => setPausedEvent(false)}
-            >
-              <div 
-                className="transition-transform duration-700 ease-in-out"
-                style={{ transform: `translateY(-${eventIndex * 80}px)` }}
-              >
+            <div className="h-[320px] relative overflow-hidden" onMouseEnter={() => setPausedEvent(true)} onMouseLeave={() => setPausedEvent(false)}>
+              <div className="transition-transform duration-700 ease-in-out" style={{ transform: `translateY(-${eventIndex * 80}px)` }}>
                 {[...eventsData, ...eventsData].map((ev, i) => (
                   <div key={i} className="h-[80px] p-4 flex gap-3 border-b border-gray-100 hover:bg-gray-50">
-                    <div className="shrink-0 w-12 h-12 bg-blue-50 border border-blue-100 rounded-xl flex flex-col items-center justify-center">
-                      <p className="text-[14px] font-black text-blue-700 leading-none">{ev.date.split(" ")[0]}</p>
-                      <p className="text-[9px] font-bold text-gray-500">{ev.date.split(" ")[1]}</p>
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-bold text-gray-800 leading-tight line-clamp-2">{ev.title}</p>
-                      <p className="text-[10px] text-gray-500 mt-1">🕒 {ev.time} | 📍 {ev.location}</p>
-                    </div>
+                    <div className="shrink-0 w-12 h-12 bg-blue-50 border border-blue-100 rounded-xl flex flex-col items-center justify-center"><p className="text-[14px] font-black text-blue-700 leading-none">{ev.date.split(" ")[0]}</p><p className="text-[9px] font-bold text-gray-500">{ev.date.split(" ")[1]}</p></div>
+                    <div><p className="text-[13px] font-bold text-gray-800 leading-tight line-clamp-2">{ev.title}</p><p className="text-[10px] text-gray-500 mt-1">🕒 {ev.time} | 📍 {ev.location}</p></div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="p-3 flex justify-center gap-1.5 bg-gray-50">
-              {eventsData.map((_, i) => (
-                <div key={i} className={`w-1.5 h-1.5 rounded-full transition ${i === eventIndex ? 'bg-green-700 w-6' : 'bg-gray-300'}`}></div>
-              ))}
-            </div>
+            <div className="p-3 flex justify-center gap-1.5 bg-gray-50">{eventsData.map((_, i) => (<div key={i} className={`w-1.5 h-1.5 rounded-full transition ${i === eventIndex ? 'bg-green-700 w-6' : 'bg-gray-300'}`}></div>))}</div>
           </div>
         </div>
-
-        {/* Breaking News Ticker Top */}
-        <div className="mt-8 bg-[#0d2a54] rounded-full px-2 py-2 flex items-center gap-3 overflow-hidden">
-          <span className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shrink-0 animate-pulse">BREAKING</span>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-white text-[13px] font-bold whitespace-nowrap animate-[marquee_20s_linear_infinite]">
-              Admission Open for BS Programs 2025-26 | Annual Sports Week starting 20th Oct | Exam Date Sheet Announced | College Timing 8:00 AM - 2:00 PM
-            </p>
-          </div>
-        </div>
-        <style>{`@keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }`}</style>
       </div>
     </section>
   );
