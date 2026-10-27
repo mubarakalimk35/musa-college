@@ -17,6 +17,7 @@ export default function ApplyPage() {
   const handleChange = (e: any) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
   const handleDobChange = (e: any) => {
     const iso = e.target.value;
     if (iso) {
@@ -24,6 +25,7 @@ export default function ApplyPage() {
       setFormData({ ...formData, dob: `${d}/${m}/${y}` });
     }
   };
+
   const handleCnicChange = (e: any) => {
     const val = e.target.value.replace(/\D/g, "");
     if (val.length <= 13) {
@@ -32,15 +34,27 @@ export default function ApplyPage() {
       setCnicError(val.length === 13 || val.length === 0 ? "" : "CNIC must be 13 digits");
     }
   };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (formData.cnic.length !== 13) { setCnicError("CNIC must be 13 digits"); return; }
     if (!formData.dob) { alert("Please select Date of Birth"); return; }
     try {
-      const res = await fetch("/api/admissions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
+      const res = await fetch("/api/admissions", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify(formData) 
+      });
       const result = await res.json();
-      if (result.success) setSubmitted(true); else alert("Failed to save!");
-    } catch (err) { alert("Error: " + err); }
+      console.log("Server Response:", result);
+      if (res.ok && result.success) {
+        setSubmitted(true);
+      } else {
+        alert("Failed to save! Reason: " + (result.error || JSON.stringify(result)));
+      }
+    } catch (err) { 
+      alert("Error: " + err); 
+    }
   };
 
   if (submitted) {
@@ -66,8 +80,6 @@ export default function ApplyPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-5 bg-white">
-            
-            {/* ROW 1 - 3 FIELDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[13px] font-black text-gray-900">Program *</label>
@@ -81,13 +93,12 @@ export default function ApplyPage() {
               <div><label className="text-[13px] font-black text-gray-900">Father's Name *</label><input name="fatherName" value={formData.fatherName} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none" placeholder="Father's Name" /></div>
             </div>
 
-            {/* ROW 2 - 3 FIELDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[13px] font-black text-gray-900">Date of Birth *</label>
                 <div className="relative w-full mt-2">
-                  <input value={formData.dob} placeholder="DD/MM/YYYY" readOnly required onClick={() => dateRef.current?.showPicker()} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none bg-white cursor-pointer" />
-                  <span onClick={() => dateRef.current?.showPicker()} className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-lg">📅</span>
+                  <input value={formData.dob} placeholder="DD/MM/YYYY" readOnly required onClick={() => (dateRef.current as any)?.showPicker?.()} className="w-full border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none bg-white cursor-pointer" />
+                  <span onClick={() => (dateRef.current as any)?.showPicker?.()} className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-lg">📅</span>
                   <input ref={dateRef} type="date" onChange={handleDobChange} className="absolute opacity-0 pointer-events-none w-0 h-0" />
                 </div>
               </div>
@@ -95,14 +106,12 @@ export default function ApplyPage() {
               <div><label className="text-[13px] font-black text-gray-900">Religion *</label><select name="religion" value={formData.religion} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl bg-white text-[15px] font-medium outline-none"><option value="">Select</option><option>Islam</option><option>Christianity</option><option>Hinduism</option><option>Other</option></select></div>
             </div>
 
-            {/* ROW 3 - 3 FIELDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="text-[13px] font-black text-gray-900">Nationality *</label><input name="nationality" value={formData.nationality} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none" /></div>
               <div><label className="text-[13px] font-black text-gray-900">Local/Domicile *</label><input name="domicile" value={formData.domicile} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none" placeholder="Quetta" /></div>
               <div><label className="text-[13px] font-black text-gray-900">Mobile No *</label><input name="mobile" value={formData.mobile} onChange={handleChange} required type="tel" className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none" placeholder="03XX-XXXXXXX" /></div>
             </div>
 
-            {/* ROW 4 - FULL WIDTH */}
             <div><label className="text-[13px] font-black text-gray-900">Complete Address *</label><textarea name="address" value={formData.address} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none" rows={2} placeholder="House No, Street, Town, City"></textarea></div>
             
             <button type="submit" className="w-full bg-blue-700 text-white py-4 rounded-xl font-black text-[16px] shadow-lg hover:bg-blue-800">Submit Application</button>

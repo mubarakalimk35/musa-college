@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Stats from "./components/Stats";
 import Programs from "./components/Programs";
@@ -77,7 +76,6 @@ export default function Home() {
         }
       `}</style>
 
-      <Navbar scrollTo={scrollTo} mobileMenu={mobileMenu} setMobileMenu={setMobileMenu} setShowForm={goToApply} />
       <Hero images={images} current={current} setShowForm={goToApply} scrollTo={scrollTo} />
       <Stats />
       <Programs />

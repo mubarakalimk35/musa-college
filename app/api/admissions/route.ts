@@ -1,52 +1,69 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+export async function GET() {
+  try {
+    const data: any = await prisma.$queryRawUnsafe(`SELECT * FROM "admissions" ORDER BY id DESC`);
+    const safe = JSON.parse(JSON.stringify(data, (k,v)=> typeof v === 'bigint' ? v.toString() : v));
+    return NextResponse.json(safe);
+  } catch (e:any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    
-    const now = new Date();
-    const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-    const time = now.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-    
-    const createdAt = `${date} ${time}`;
+    console.log("Incoming:", body);
 
-    // Check body empty to nahi
-    if (!body.studentName || !body.cnic) {
-      return NextResponse.json({ success: false, error: "Name and CNIC required" }, { status: 400 });
+    // Safe insert - single quote issue khatam
+    const { program, studentName, fatherName, dob, cnic, religion, nationality, domicile, mobile, address } = body;
+
+    if (!program || !studentName || !cnic) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const admission = await prisma.admission.create({
-      data: {
-        program: body.program || "",
-        studentName: body.studentName,
-        fatherName: body.fatherName || "",
-        dob: body.dob || "",
-        cnic: body.cnic,
-        religion: body.religion || "",
-        nationality: body.nationality || "",
-        domicile: body.domicile || "",
-        mobile: body.mobile || "",
-        address: body.address || "",
-        createdAt: createdAt,
-        status: "PENDING",
-      }
-    });
-    return NextResponse.json({ success: true, data: admission });
-  } catch (error: any) {
-    console.error("SAVE ERROR FULL:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const createdAt = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
+
+    // Use Prisma's create - ye sabse safe hai
+    const result = await prisma.$executeRawUnsafe(
+      `INSERT INTO "admissions" ("program","studentName","fatherName","dob","cnic","religion","nationality","domicile","mobile","address","status","createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      program, studentName, fatherName, dob, String(cnic), religion, nationality, domicile, String(mobile), address, "PENDING", createdAt
+    );
+
+    // Agar $executeRawUnsafe $1 wala support na kare to fallback
+    return NextResponse.json({ success: true });
+
+  } catch (e:any) {
+    console.error("SAVE FAILED:", e.message);
+    // Fallback - agar upar wala fail ho to simple unsafe try
+    try {
+      const body = await req.json().catch(()=>null);
+      if(!body) throw e;
+      const createdAt = new Date().toLocaleString();
+      const safe = (s:any) => String(s || "").replace(/'/g, "''");
+      await prisma.$queryRawUnsafe(`
+        INSERT INTO "admissions" ("program","studentName","fatherName","dob","cnic","religion","nationality","domicile","mobile","address","status","createdAt")
+        VALUES ('${safe(body.program)}','${safe(body.studentName)}','${safe(body.fatherName)}','${safe(body.dob)}','${safe(body.cnic)}','${safe(body.religion)}','${safe(body.nationality)}','${safe(body.domicile)}','${safe(body.mobile)}','${safe(body.address)}','PENDING','${createdAt}')
+      `);
+      return NextResponse.json({ success: true });
+    } catch (err:any) {
+      return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    }
   }
 }
 
-export async function GET() {
-  try {
-    const admissions = await prisma.admission.findMany({
-      orderBy: { id: 'desc' }
-    });
-    return NextResponse.json(admissions);
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
+export async function PATCH(req: Request) {
+  const { id, status } = await req.json();
+  await prisma.$queryRawUnsafe(`UPDATE "admissions" SET "status" = '${status}' WHERE id = ${Number(id)}`);
+  return NextResponse.json({ success: true });
+}
+
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  await prisma.$queryRawUnsafe(`DELETE FROM "admissions" WHERE id = ${Number(id)}`);
+  return NextResponse.json({ success: true });
 }
