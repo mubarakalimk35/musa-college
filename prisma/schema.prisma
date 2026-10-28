@@ -24,3 +24,69 @@ model Admission {
 
   @@map("admissions")
 }
+
+// --- HOME PAGE ---
+model HomeHero {
+  id        String   @id @default(cuid())
+  image     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model HomeStats {
+  id        String   @id @default(cuid())
+  label     String
+  value     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// --- FACULTY ---
+model Faculty {
+  id          String   @id @default(cuid())
+  name        String
+  designation String
+  department  String
+  qualification String?
+  image       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// --- CONTACT PAGE ---
+model ContactInfo {
+  id        String   @id @default(cuid())
+  address   String   @db.Text
+  phone     String
+  email     String
+  mapLink   String?  @db.Text
+  principalName  String?
+  principalMsg   String? @db.Text
+  principalImage String?
+  updatedAt DateTime @updatedAt
+}
+
+// --- NEWS & EVENTS ---
+model News {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  image     String?
+  date      DateTime @default(now())
+  category  String   @default("News")
+  isTicker  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  image       String?
+  eventDate   DateTime @default(now())
+  location    String?
+  time        String?
+  category    String   @default("Events")
+  isTicker    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}

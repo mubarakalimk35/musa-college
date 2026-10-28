@@ -1,0 +1,32 @@
+{
+  "hero": [
+    {
+      "id": 1793191289438.317,
+      "image": "/downloads/1793191289166-Free-CollegeXX.jpg",
+      "order": 1,
+      "isDefault": false
+    }
+  ],
+  "stats": [
+    {
+      "id": 1,
+      "label": "Students",
+      "value": "3000+"
+    },
+    {
+      "id": 2,
+      "label": "Faculty",
+      "value": "80+"
+    },
+    {
+      "id": 3,
+      "label": "Courses",
+      "value": "8"
+    },
+    {
+      "id": 4,
+      "label": "Years",
+      "value": "1989"
+    }
+  ]
+}

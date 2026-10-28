@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 export default function NoticeTicker() {
@@ -7,12 +7,32 @@ export default function NoticeTicker() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const notices = [
+  const fallbackNotices = [
     "Admissions Open 2025-26 for BS Programs — Apply Now",
     "Last Date for Form Submission: 30 May 2025",
     "Entry Test Schedule Announced",
     "Merit List will be displayed on 5th June 2025",
   ];
+
+  const [notices, setNotices] = useState<string[]>(fallbackNotices);
+
+  useEffect(() => {
+    fetch("/api/news", { cache: "no-store" })
+      .then(r => r.json())
+      .then(d => {
+        const list = Array.isArray(d) ? d : d.news || d.data || [];
+        if (list.length > 0) {
+          // agar isTicker field hai to sirf wohi, warna saari news ticker me
+          const tickerItems = list.filter((n: any) => n.isTicker === true);
+          const finalList = tickerItems.length > 0 ? tickerItems : list;
+          const titles = finalList.map((n: any) => n.title).filter(Boolean);
+          if (titles.length > 0) setNotices(titles);
+        }
+      })
+      .catch(() => {
+        // Neon sleep / offline to fallback wala hi rahega
+      });
+  }, []);
 
   const goToNews = () => {
     const possibleIds = ["newsandevents", "news", "news-events"];

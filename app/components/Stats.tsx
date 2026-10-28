@@ -38,13 +38,48 @@ function CountUp({ end, suffix = "" }: { end: number; suffix?: string }) {
   );
 }
 
+// ye default hai, agar API fail ho to yahi dikhega
+const defaultStats = [
+  { id: 1, label: "Students", value: "2000+" },
+  { id: 2, label: "Faculty", value: "50+" },
+  { id: 3, label: "Programs", value: "9" },
+  { id: 4, label: "Established", value: "1987" },
+];
+
 export default function Stats() {
+  const [stats, setStats] = useState(defaultStats);
+
+  useEffect(() => {
+    const fetchData = () => {
+      fetch(`/api/home?t=${Date.now()}`, { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.stats?.length) setStats(data.stats);
+        })
+        .catch(() => {});
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const parseValue = (val: string) => {
+    const num = parseInt(val.replace(/[^0-9]/g, "")) || 0;
+    const suffix = val.replace(/[0-9]/g, "");
+    return { num, suffix };
+  };
+
   return (
     <section className="bg-[#0d2a54] text-white py-4 px-6 md:px-20 grid grid-cols-4 gap-4 text-center">
-      <div><CountUp end={2000} suffix="+" /><p className="text-blue-200 text-sm">Students</p></div>
-      <div><CountUp end={50} suffix="+" /><p className="text-blue-200 text-sm">Faculty</p></div>
-      <div><CountUp end={9} suffix="" /><p className="text-blue-200 text-sm">Programs</p></div>
-      <div><CountUp end={1987} suffix="" /><p className="text-blue-200 text-sm">Established</p></div>
+      {stats.map((item) => {
+        const { num, suffix } = parseValue(item.value);
+        return (
+          <div key={item.id}>
+            <CountUp end={num} suffix={suffix} />
+            <p className="text-blue-200 text-sm">{item.label}</p>
+          </div>
+        );
+      })}
     </section>
   );
 }

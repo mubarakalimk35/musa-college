@@ -1,9 +1,9 @@
 "use client";
 const alumni = [
-  { name: "Dr. Abdul Qadir", batch: "1995", role: "Professor, BUITEMS", img: "https://i.pravatar.cc/150?img=11", quote: "This college made me what I am today." },
-  { name: "Engr. Sana Ullah", batch: "2002", role: "Engineer, WAPDA", img: "https://i.pravatar.cc/150?img=32", quote: "Best faculty and environment for learning." },
-  { name: "Ms. Fatima Khan", batch: "2010", role: "CSS Officer", img: "https://i.pravatar.cc/150?img=5", quote: "Proud to be a part of GM Musa College." },
-  { name: "Dr. Nisar Ahmed", batch: "1998", role: "Doctor, CMH Quetta", img: "https://i.pravatar.cc/150?img=15", quote: "Foundation of my career started here." },
+  { name: "Dr. Abdul Qadir", batch: "1995", role: "Professor, BUITEMS", img: "", quote: "This college made me what I am today." },
+  { name: "Engr. Sana Ullah", batch: "2002", role: "Engineer, WAPDA", img: "", quote: "Best faculty and environment for learning." },
+  { name: "Ms. Fatima Khan", batch: "2010", role: "CSS Officer", img: "", quote: "Proud to be a part of GM Musa College." },
+  { name: "Dr. Nisar Ahmed", batch: "1998", role: "Doctor, CMH Quetta", img: "", quote: "Foundation of my career started here." },
 ];
 export default function Alumni() {
   return (
@@ -13,7 +13,13 @@ export default function Alumni() {
         <div className="grid md:grid-cols-4 gap-6">
           {alumni.map((a,i) => (
             <div key={i} className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-6 text-center hover:bg-white/20 transition">
-              <img src={a.img} className="w-20 h-20 rounded-full mx-auto border-4 border-white/20 object-cover" />
+              {a.img ? (
+                <img src={a.img} className="w-20 h-20 rounded-full mx-auto border-4 border-white/20 object-cover" />
+              ) : (
+                <div className="w-20 h-20 rounded-full mx-auto border-4 border-white/20 bg-white/20 flex items-center justify-center text-xl font-black">
+                  {a.name.charAt(0)}
+                </div>
+              )}
               <h4 className="font-black text-[14px] mt-4">{a.name}</h4>
               <p className="text-[11px] text-blue-200">Batch {a.batch} • {a.role}</p>
               <p className="text-[11px] text-white/70 mt-3 italic">"{a.quote}"</p>

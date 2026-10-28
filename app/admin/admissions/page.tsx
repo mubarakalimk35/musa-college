@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx-js-style";
+import { offlinePost } from "@/lib/offlineSync";
 
 export default function AdminPanel() {
   const router = useRouter();
@@ -23,14 +24,14 @@ export default function AdminPanel() {
 
   const updateStatus = async (id: number, status: string) => {
     if(!confirm(`Make this ${status}?`)) return;
-    await fetch("/api/admissions", { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ id, status }) });
-    fetchData();
+    await offlinePost("/api/admissions", { id, status, _method: "PATCH" });
+    setAdmissions(prev => prev.map(a => a.id === id ? { ...a, status } : a));
   };
 
   const deleteAdmission = async (id: number) => {
     if(!confirm("Delete this application permanently?")) return;
-    await fetch(`/api/admissions?id=${id}`, { method: "DELETE" });
-    fetchData();
+    await offlinePost("/api/admissions", { id, _method: "DELETE" });
+    setAdmissions(prev => prev.filter(a => a.id !== id));
   };
 
   const downloadExcel = () => {

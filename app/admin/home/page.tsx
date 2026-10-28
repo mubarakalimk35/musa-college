@@ -1,0 +1,184 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { offlinePost } from "@/lib/offlineSync";
+
+const DEFAULT_SLIDES = [
+  { id: 'default-1', image: '/hero1.jpeg', isDefault: true, order: 1 },
+  { id: 'default-2', image: '/hero2.jpeg', isDefault: true, order: 2 },
+  { id: 'default-3', image: '/hero3.jpeg', isDefault: true, order: 3 },
+  { id: 'default-4', image: '/hero4.jpeg', isDefault: true, order: 4 },
+  { id: 'default-5', image: '/hero5.jpeg', isDefault: true, order: 5 },
+  { id: 'default-6', image: '/hero6.jpeg', isDefault: true, order: 6 },
+];
+
+export default function AdminHomePage() {
+  const router = useRouter();
+  const [extraSlides, setExtraSlides] = useState<any[]>([]);
+  const [stats, setStats] = useState([
+    { id: 1, label: "Students", value: "5000+" },
+    { id: 2, label: "Faculty", value: "50+" },
+    { id: 3, label: "Programs", value: "9" },
+    { id: 4, label: "Established", value: "1987" },
+  ]);
+  const [saved, setSaved] = useState(false);
+  const [offlineMsg, setOfflineMsg] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/home", { cache: "no-store" }).then(r=>r.json()).then(d=>{
+      if(d?.hero) {
+        let extra = d.hero.filter((h:any)=>!h.isDefault);
+        extra = extra.map((s:any, idx:number)=> ({...s, order: s.order ?? 7 + idx, isDefault: false }));
+        setExtraSlides(extra);
+      }
+      if(d?.stats) setStats(d.stats);
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+  }, []);
+
+  const handleMultiUpload = async (e: any) => {
+    const files = Array.from(e.target.files) as File[];
+    if(files.length === 0) return;
+    if(extraSlides.length + files.length > 10){
+      alert("Maximum 10 extra images allowed!"); return;
+    }
+    if (!navigator.onLine) { alert("Internet connection required for upload."); return; }
+    setUploading(true);
+    const uploaded: any[] = [];
+    for(const file of files){
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      const url = data.url || data.fileUrl || data.path || data.secure_url || "";
+      if(url){
+        uploaded.push({ id: Date.now()+Math.random(), image: url, order: 7 + extraSlides.length + uploaded.length, isDefault: false });
+      }
+    }
+    setExtraSlides([...extraSlides, ...uploaded]);
+    setUploading(false);
+  };
+
+  const getCombinedSorted = () => {
+    return [...DEFAULT_SLIDES, ...extraSlides].sort((a,b)=> a.order - b.order);
+  };
+
+  const moveExtra = (currentIndex: number, dir: number) => {
+    const combined = getCombinedSorted();
+    const extraInCombinedIndex = combined.findIndex(s => s.id === extraSlides.sort((a,b)=>a.order-b.order)[currentIndex].id);
+    const targetIndex = extraInCombinedIndex + dir;
+    if(targetIndex < 0 || targetIndex >= combined.length) return;
+    const targetSlide = combined[targetIndex];
+    const newExtra = [...extraSlides];
+    const currentExtra = newExtra.find(s => s.id === combined[extraInCombinedIndex].id);
+    if(!currentExtra) return;
+    currentExtra.order = targetSlide.order + (dir > 0 ? 0.1 : -0.1);
+    const all = [...DEFAULT_SLIDES, ...newExtra].sort((a,b)=>a.order-b.order);
+    all.forEach((s, idx) => { s.order = idx + 1; });
+    setExtraSlides(all.filter(s=>!s.isDefault));
+  };
+
+  const setPosition = (extraId: any, newPos: number) => {
+    const all = [...DEFAULT_SLIDES, ...extraSlides];
+    const extra = all.find(s=>s.id===extraId);
+    if(!extra) return;
+    extra.order = newPos;
+    const sorted = all.sort((a,b)=> a.order - b.order || (a.isDefault ? -1 : 1));
+    const movedItem = sorted.splice(sorted.findIndex(s=>s.id===extraId), 1)[0];
+    sorted.splice(newPos -1, 0, movedItem);
+    sorted.forEach((s, idx) => s.order = idx + 1);
+    setExtraSlides(sorted.filter(s=>!s.isDefault));
+  };
+
+  const handleSave = async () => {
+    const sorted = [...extraSlides].sort((a,b)=> a.order - b.order);
+    const res: any = await offlinePost("/api/home", { hero: sorted, stats });
+    if(res?.ok || res?.offline){
+      setSaved(true);
+      setOfflineMsg(!!res.offline);
+      setTimeout(()=>{setSaved(false); setOfflineMsg(false)}, 3000);
+    }
+  };
+
+  if (loading) return <div className="p-10 font-bold">Loading...</div>;
+
+  const combinedView = getCombinedSorted();
+
+  return (
+    <div className="p-3 bg-gray-100 min-h-screen">
+      <div className="max-w-[1600px] mx-auto">
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={()=>router.push("/admin")} className="bg-white border w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">←</button>
+          <h1 className="text-xl font-black text-[#0d2a54]">Manage Home Page</h1>
+          <span className="ml-auto text-[11px] bg-white border px-3 py-1 rounded-full font-bold">{combinedView.length}/16 Slides | 4 Stats</span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.6fr] gap-3">
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-black text-[#0d2a54] text-sm">Hero Slider - Total {combinedView.length}/16</h2>
+              <button onClick={handleSave} className="bg-[#0d2a54] text-white font-bold px-5 py-1.5 rounded-lg text-xs">Save & Publish</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="border-2 border-dashed rounded-xl p-3 text-center bg-gray-50 h-fit">
+                <p className="font-bold text-xs">Upload Extra</p>
+                <label className="mt-2 inline-block bg-[#0d2a54] text-white px-4 py-1.5 rounded-lg text-xs font-bold cursor-pointer">
+                  {uploading ? "Uploading..." : "Select & Upload"}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handleMultiUpload} disabled={uploading} />
+                </label>
+                <p className="text-[10px] text-gray-400 mt-1">{extraSlides.length}/10 extra</p>
+              </div>
+              <div className="text-[11px] text-gray-500 bg-blue-50 border border-blue-100 p-2.5 rounded-lg h-fit">
+                6 Default fixed. You can add 10 extra, position 1-16.
+              </div>
+            </div>
+
+            <p className="text-[11px] font-black mb-2">Live Order Preview - 6 Columns:</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+              {combinedView.map((s:any, idx:number)=>(
+                <div key={s.id} className={`border rounded-lg p-1.5 flex flex-col gap-1 ${s.isDefault ? 'bg-white' : 'bg-green-50 border-green-300'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black bg-[#0d2a54] text-white w-5 h-5 flex items-center justify-center rounded-full">{idx+1}</span>
+                    {s.isDefault ? <span className="text-[7px] bg-gray-100 border px-1 py-0.5 rounded font-bold">LOCK</span> : <span className="text-[7px] bg-green-600 text-white px-1 py-0.5 rounded font-bold">EXTRA</span>}
+                  </div>
+                  <img src={s.image} className="h-14 w-full object-cover rounded border" alt="" />
+                  {!s.isDefault && (
+                    <div className="flex flex-col gap-1">
+                      <select value={idx+1} onChange={(e)=>setPosition(s.id, parseInt(e.target.value))} className="text-[9px] border-2 rounded px-1 py-1 font-bold w-full">
+                        {Array.from({length: combinedView.length}, (_,i)=>i+1).map(n=>(<option key={n} value={n}>Pos {n}</option>))}
+                      </select>
+                      <div className="flex gap-0.5">
+                        <button onClick={()=>{ const se=[...extraSlides].sort((a,b)=>a.order-b.order); const ci=se.findIndex(ex=>ex.id===s.id); moveExtra(ci, -1)}} className="flex-1 text-[9px] bg-white border px-1 py-1 rounded font-bold">↑</button>
+                        <button onClick={()=>{ const se=[...extraSlides].sort((a,b)=>a.order-b.order); const ci=se.findIndex(ex=>ex.id===s.id); moveExtra(ci, 1)}} className="flex-1 text-[9px] bg-white border px-1 py-1 rounded font-bold">↓</button>
+                        <button onClick={()=>setExtraSlides(extraSlides.filter(ex=>ex.id!==s.id))} className="flex-1 text-[9px] bg-red-600 text-white px-1 py-1 rounded font-bold">X</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {saved && <p className="text-green-600 text-xs font-bold text-center mt-2">{offlineMsg ? "Offline Saved! Will publish when online." : "Saved Successfully!"}</p>}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border p-4 h-fit">
+            <h2 className="font-black text-[#0d2a54] text-sm mb-3">Stats Section - 4 Items</h2>
+            <div className="grid grid-cols-2 gap-2.5">
+              {stats.map((s:any, i:number)=>(
+                <div key={s.id} className="border-2 border-gray-100 rounded-xl p-2.5 bg-gray-50/50">
+                  <input className="w-full border-2 border-white focus:border-[#0d2a54] shadow-sm rounded-lg px-2 py-2 text-base font-black text-[#0d2a54] outline-none text-center bg-white" value={s.value} onChange={e=>{let ns=[...stats]; ns[i].value=e.target.value; setStats(ns)}} />
+                  <input className="w-full border rounded-md px-2 py-1.5 text-[11px] font-bold outline-none mt-2 text-center" value={s.label} onChange={e=>{let ns=[...stats]; ns[i].label=e.target.value; setStats(ns)}} />
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 bg-[#0d2a54] text-white rounded-lg p-2 text-center">
+              <p className="text-[10px] font-bold tracking-wider">{stats.map((s:any)=>`${s.value} ${s.label}`).join(' • ')}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

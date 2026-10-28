@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { offlinePost } from "@/lib/offlineSync";
 
 const TYPES = ["Prospectus", "Admission Form", "Scholarship Form", "FSc Time Table", "BS Time Table", "Date Sheet", "Result"];
 
@@ -21,22 +22,26 @@ export default function AdminDownloads() {
   const handleUpload = async (e: any) => {
     const file = e.target.files[0];
     if (!file || !title) { alert("Title is required!"); return; }
+    if (!navigator.onLine) { alert("File upload ke liye internet chahiye. Bina net ke upload nahi hoga."); return; }
     setUploading(true);
     try {
       const fd = new FormData(); fd.append("file", file);
       const upRes = await fetch("/api/upload", { method: "POST", body: fd });
       const upData = await upRes.json();
       if (upData.error) throw new Error(upData.error);
-      await fetch("/api/downloads", { method: "POST", body: JSON.stringify({ id: Date.now(), title, type, file: upData.url }) });
-      setTitle(""); load();
+      // Offline support
+      await offlinePost("/api/downloads", { id: Date.now(), title, type, file: upData.url });
+      setTitle(""); 
+      await load();
     } catch (err: any) { alert(err.message); }
     setUploading(false);
   };
 
   const del = async (id: number) => {
     if (!confirm("Delete?")) return;
-    await fetch("/api/downloads", { method: "DELETE", body: JSON.stringify({ id }) });
-    load();
+    // Offline support
+    await offlinePost("/api/downloads", { id, _method: "DELETE" });
+    setDocs(prev => prev.filter((d:any) => d.id !== id));
   };
 
   return (
@@ -44,7 +49,6 @@ export default function AdminDownloads() {
       <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
         <div className="flex items-center justify-between mb-4 shrink-0">
           <div className="flex items-center gap-3">
-            {/* Back Button Added */}
             <button
               onClick={() => router.push("/admin")}
               className="w-9 h-9 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-700 font-bold hover:bg-[#0f172a] hover:text-white transition-all shadow-sm"

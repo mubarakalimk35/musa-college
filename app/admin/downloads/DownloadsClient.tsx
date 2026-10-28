@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const documents = [
+const defaultDocs = [
   { title: "College Prospectus 2025-26", type: "Prospectus", size: "5.4 MB", file: "/downloads/prospectus.pdf", icon: "📘" },
   { title: "BS Admission Form 2025-26", type: "Admission Form", size: "2.1 MB", file: "/downloads/admission-form.pdf", icon: "📄" },
   { title: "Scholarship Form 2025-26", type: "Scholarship Form", size: "1.5 MB", file: "/downloads/scholarship-form.pdf", icon: "🎓" },
@@ -14,8 +14,31 @@ const documents = [
 
 export default function DownloadsPage() {
   const [filter, setFilter] = useState("All");
-  // AAPKA KAHA HUA ORDER
+  const [documents, setDocuments] = useState<any[]>(defaultDocs);
   const types = ["All", "Prospectus", "Admission Form", "Scholarship Form", "FSc Time Table", "BS Time Table", "Date Sheet", "Result"];
+  
+  useEffect(() => {
+    const loadDocs = async () => {
+      try {
+        const res = await fetch("/api/downloads", { cache: "no-store" });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          // Admin se aaya data + icon add
+          const mapped = data.map((d: any) => ({
+            ...d,
+            icon: d.type?.includes("Prospectus") ? "📘" : d.type?.includes("Result") ? "📊" : d.type?.includes("Date") ? "📅" : "📄",
+            size: d.size || "PDF"
+          }));
+          setDocuments(mapped);
+          localStorage.setItem("cached_downloads", JSON.stringify(mapped));
+        }
+      } catch {
+        const cached = localStorage.getItem("cached_downloads");
+        if (cached) setDocuments(JSON.parse(cached));
+      }
+    };
+    loadDocs();
+  }, []);
   
   const filtered = filter === "All" ? documents : documents.filter(d => d.type === filter);
 
@@ -51,7 +74,7 @@ export default function DownloadsPage() {
                   <h4 className="font-black text-[13px] text-[#0d2a54] leading-tight truncate">{doc.title}</h4>
                   <span className="text-[11px] text-gray-500 font-medium">{doc.size} • {doc.type}</span>
                 </div>
-                <a href={doc.file} download className="bg-[#0d2a54] text-white px-4 py-2 rounded-full text-[11px] font-black hover:bg-blue-800 shrink-0">Download</a>
+                <a href={doc.file} download target="_blank" className="bg-[#0d2a54] text-white px-4 py-2 rounded-full text-[11px] font-black hover:bg-blue-800 shrink-0">Download</a>
               </div>
             ))}
           </div>
