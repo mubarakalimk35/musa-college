@@ -1,66 +1,13 @@
-/* ===================================
-   MUSA COLLEGE - UNIVERSAL FIX (V4)
-   =================================== */
-
-/* 1. Sab se important - White BG par white text kabhi nahi */
-.bg-white .text-white,
-.bg-gray-50 .text-white,
-.bg-white .text-gray-100,
-.bg-white .text-gray-200,
-.bg-gray-50 .text-gray-100,
-.bg-gray-50 .text-gray-200 {
-  color: #111827 !important;
-}
-
-/* 2. Light grey text jo white par nazar nahi aata */
-.bg-white .text-gray-300,
-.bg-white .text-gray-400,
-.bg-gray-50 .text-gray-300,
-.bg-gray-50 .text-gray-400 {
-  color: #374151 !important;
-}
-.bg-white .text-gray-500,
-.bg-gray-50 .text-gray-500 {
-  color: #4b5563 !important;
-}
-
-/* 3. Learn More jaise buttons - white border par white text */
-.bg-white a.text-white,
-.bg-white button.text-white,
-.bg-gray-50 a.text-white,
-.bg-gray-50 button.text-white {
-  color: #111827 !important;
-  border-color: #111827 !important;
-}
-
-/* 4. Input readable */
-input, textarea, select {
-  color: #111827 !important;
-}
-input::placeholder, textarea::placeholder {
-  color: #6b7280 !important;
-  opacity: 1 !important;
-}
-
-/* 5. Dark card ke andar white rehne do - ye zaroori hai */
-.bg-\[\#0d2a54\] *, 
-.bg-black *,
-.bg-green-600 *,
-.bg-blue-600 *,
-.bg-\[\#0d1b34\] * {
-  color: #ffffff !important;
-}
-.bg-\[\#0d2a54\] input, 
-.bg-black input,
-.bg-green-600 input,
-.bg-\[\#0d1b34\] input {
-  color: #111827 !important;
-  background-color: #ffffff !important;
-}
-
-/* 6. Mobile safety */
+/* Mobile safety only - color fix ab globals.css me hai */
 @media (max-width: 1024px) {
-  body { overflow-x: hidden !important; }
-  img { max-width: 100% !important; height: auto !important; }
-  input, textarea, select { font-size: 16px !important; }
+  body {
+    overflow-x: hidden !important;
+  }
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 }
