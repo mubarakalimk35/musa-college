@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 
-export const runtime = "nodejs"; // FIX: Sharp ko Edge par crash hone se bachata hai
-
 export async function POST(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -51,7 +49,7 @@ export async function POST(req: Request) {
       const { put } = await import("@vercel/blob");
       const blob = await put(`${safeFolder}/${finalFileName}`, buffer, { 
         access: "public",
-        contentType: contentType, // FIX: PDF sahi khulega
+        contentType: contentType,
       });
       return NextResponse.json({ url: blob.url });
     }
