@@ -1,9 +1,11 @@
+export const runtime = 'nodejs';
+
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 
 const noStore = { "Cache-Control": "no-store, no-cache, must-revalidate" }
-// Prisma enum ke hisab se rakho - space nahi underscore
-const ALLOWED_CATEGORIES = ["General", "Sports Week", "Convocation", "Sports_Week"] as const
+// Prisma enum ke hisab se - space wala nahi chalega
+const ALLOWED_CATEGORIES = ["General", "Sports_Week", "Convocation"] as const
 
 export async function GET(req: Request) {
   try {
@@ -15,8 +17,11 @@ export async function GET(req: Request) {
 
     const where: any = {}
     if (category && ALLOWED_CATEGORIES.includes(category as any)) {
-      // DB me underscore wali value bhi handle
       where.category = category
+    }
+    // "Sports Week" ko bhi handle karna hai
+    if (category === "Sports Week") {
+      where.category = "Sports_Week"
     }
 
     const [gallery, total] = await Promise.all([
@@ -24,12 +29,12 @@ export async function GET(req: Request) {
       prisma.gallery.count({ where })
     ])
 
-    const mapped = gallery.map((g: any) => ({
+    const mapped = gallery.map((g) => ({
       id: g.id,
       title: g.title,
       category: g.category,
-      image: g.image || g.imageUrl,
-      imageUrl: g.imageUrl || g.image,
+      image: g.image,
+      imageUrl: g.image, // frontend ke liye dono bhej rahe hain, DB me sirf image save hai
       createdAt: g.createdAt,
     }))
 
@@ -52,19 +57,19 @@ export async function POST(req: Request) {
     if (!finalImage || finalImage.length > 5000) {
       return NextResponse.json({ error: "Valid Image URL required" }, { status: 400, headers: noStore })
     }
-    // URL format check
     try { new URL(finalImage) } catch { 
       return NextResponse.json({ error: "Invalid image URL format" }, { status: 400, headers: noStore }) 
     }
 
-    const safeCategory = ALLOWED_CATEGORIES.includes(category as any) ? category : "General"
+    let safeCategory: any = "General"
+    if (category === "Sports Week") safeCategory = "Sports_Week"
+    else if (ALLOWED_CATEGORIES.includes(category as any)) safeCategory = category
 
     const newImage = await prisma.gallery.create({
       data: {
         title: title.trim(),
         category: safeCategory,
-        image: finalImage,
-        imageUrl: finalImage,
+        image: finalImage, // <-- FIX: sirf 'image' bhejo, 'imageUrl' mat bhejo
       }
     })
 
