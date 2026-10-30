@@ -1,32 +1,36 @@
 "use client";
-const alumni = [
-  { name: "Dr. Abdul Qadir", batch: "1995", role: "Professor, BUITEMS", img: "", quote: "This college made me what I am today." },
-  { name: "Engr. Sana Ullah", batch: "2002", role: "Engineer, WAPDA", img: "", quote: "Best faculty and environment for learning." },
-  { name: "Ms. Fatima Khan", batch: "2010", role: "CSS Officer", img: "", quote: "Proud to be a part of GM Musa College." },
-  { name: "Dr. Nisar Ahmed", batch: "1998", role: "Doctor, CMH Quetta", img: "", quote: "Foundation of my career started here." },
-];
+
 export default function Alumni() {
   return (
-    <section id="alumni" className="px-6 md:px-20 py-16 bg-[#0d2a54] text-white">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-10"><span className="bg-white/10 px-4 py-1 rounded-full text-xs font-bold">OUR PRIDE</span><h2 className="text-3xl font-black mt-3">Our Alumni</h2><p className="text-blue-200 text-sm mt-2">Successful graduates serving the nation</p></div>
-        <div className="grid md:grid-cols-4 gap-6">
-          {alumni.map((a,i) => (
-            <div key={i} className="bg-white/10 backdrop-blur border border-white/10 rounded-2xl p-6 text-center hover:bg-white/20 transition">
-              {a.img ? (
-                <img src={a.img} className="w-20 h-20 rounded-full mx-auto border-4 border-white/20 object-cover" />
-              ) : (
-                <div className="w-20 h-20 rounded-full mx-auto border-4 border-white/20 bg-white/20 flex items-center justify-center text-xl font-black">
-                  {a.name.charAt(0)}
-                </div>
-              )}
-              <h4 className="font-black text-[14px] mt-4">{a.name}</h4>
-              <p className="text-[11px] text-blue-200">Batch {a.batch} • {a.role}</p>
-              <p className="text-[11px] text-white/70 mt-3 italic">"{a.quote}"</p>
-            </div>
-          ))}
+    <section id="alumni" className="px-4 md:px-20 py-12 md:py-16 bg-[#0d1b34] text-white relative overflow-hidden">
+      {/* bg glow */}
+      <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-600/20 rounded-full blur-[80px]" />
+      <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-indigo-600/20 rounded-full blur-[80px]" />
+
+      <div className="max-w-3xl mx-auto relative z-10">
+        <div className="text-center">
+          <span className="bg-white/[0.08] border border-white/10 px-3.5 py-1.5 rounded-full text-[10px] font-black tracking-[0.2em] text-blue-200">OUR PRIDE</span>
+          <h2 className="text-[24px] md:text-[32px] font-black mt-3 tracking-tight">Our Alumni</h2>
+          <p className="text-[12px] md:text-[13px] text-white/50 mt-2 max-w-md mx-auto">From Sariab Road to leading positions across Pakistan</p>
         </div>
-        <div className="mt-10 text-center"><button className="bg-white text-[#0d2a54] px-6 py-2.5 rounded-full font-black text-[13px]">Join Alumni Network →</button></div>
+
+        <div className="mt-8 bg-gradient-to-b from-white/[0.08] to-white/[0.03] backdrop-blur-xl border border-white/10 rounded-[20px] md:rounded-[24px] p-6 md:p-8 text-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
+          <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-b from-white to-gray-200 rounded-[16px] flex items-center justify-center text-[24px] md:text-[28px] mx-auto mb-4 shadow-lg shadow-black/20">
+            🎓
+          </div>
+          <h3 className="text-[18px] md:text-xl font-black tracking-tight">Coming Soon</h3>
+          <p className="text-[12px] md:text-[13px] text-blue-100/70 mt-2 leading-relaxed max-w-sm mx-auto">
+            We are building our Alumni Directory. Soon you will see successful graduates from Govt. General Muhammad Musa College.
+          </p>
+
+          <div className="mt-6 flex justify-center gap-2">
+            <div className="h-1 w-6 bg-white/20 rounded-full animate-pulse" />
+            <div className="h-1 w-1 bg-white/20 rounded-full" />
+            <div className="h-1 w-1 bg-white/10 rounded-full" />
+          </div>
+
+          <p className="text-[9px] md:text-[10px] text-white/30 mt-5 tracking-[0.25em] uppercase font-bold">Est. 1987 — Work in Progress</p>
+        </div>
       </div>
     </section>
   );

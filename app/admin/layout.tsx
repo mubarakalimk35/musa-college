@@ -7,43 +7,64 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    if (pathname !== "/admin/login") {
+      if (localStorage.getItem("isAdminLoggedIn") !== "true") {
+        router.replace("/admin/login");
+        return;
+      }
+    }
+    setAuthChecked(true);
+
     setIsOnline(navigator.onLine);
-    
     const updateCount = () => {
-      const q = JSON.parse(localStorage.getItem("offline_queue") || "[]");
-      setPendingCount(q.length);
+      try {
+        const q = JSON.parse(localStorage.getItem("offline_queue") || "[]");
+        setPendingCount(q.length);
+      } catch { setPendingCount(0); }
     };
-    
     updateCount();
 
     const handleOnline = async () => {
       setIsOnline(true);
-      // Auto sync queue
-      const queue = JSON.parse(localStorage.getItem("offline_queue") || "[]");
-      if (queue.length > 0) {
-        for (const item of queue) {
-          try {
-            await fetch(item.url, {
-              method: item.data?._method === "DELETE" ? "DELETE" : "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(item.data),
-            });
-          } catch {}
-        }
-        localStorage.removeItem("offline_queue");
-        setPendingCount(0);
+      const raw = localStorage.getItem("offline_queue");
+      const queue = raw ? JSON.parse(raw) : [];
+      if (queue.length === 0) return;
+
+      setIsSyncing(true);
+      let success = 0;
+      for (const item of queue) {
+        try {
+          const res = await fetch(item.url, {
+            method: item.data?._method === "DELETE" ? "DELETE" : item.data?._method === "PATCH" ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item.data),
+          });
+          if (res.ok) success++;
+        } catch {}
       }
+      // FIX: Chahe success ho ya fail - queue clear karo warna 19 ka loop chalta rahega
+      localStorage.removeItem("offline_queue");
+      setPendingCount(0);
+      setIsSyncing(false);
+      window.dispatchEvent(new Event("offline-synced"));
     };
     
     const handleOffline = () => setIsOnline(false);
+
+    // FIX: Page load par hi check karo, online event ka wait mat karo
+    if (navigator.onLine) {
+      handleOnline();
+    }
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("storage", updateCount);
     
-    const interval = setInterval(updateCount, 1000);
+    const interval = setInterval(updateCount, 3000);
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -51,51 +72,57 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       window.removeEventListener("storage", updateCount);
       clearInterval(interval);
     };
-  }, []);
+  }, [pathname, router]);
 
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Offline / Sync Banner */}
-      {!isOnline && (
-        <div className="bg-yellow-500 text-black text-center py-1.5 text-xs font-black tracking-wider sticky top-0 z-[100]">
-          ⚠️ Offline Mode - {pendingCount > 0 ? `${pendingCount} changes queued - ` : ""}Net aate hi auto sync ho jayega
-        </div>
-      )}
-      {isOnline && pendingCount > 0 && (
-        <div className="bg-green-600 text-white text-center py-1.5 text-xs font-black tracking-wider sticky top-0 z-[100]">
-          🔄 Syncing {pendingCount} pending changes...
-        </div>
-      )}
+    <div className="min-h-screen bg-[#f8fafc]">
+      <div className="sticky top-0 z-[100] w-full">
+        {!isOnline && (
+          <div className="bg-yellow-500 text-black text-center py-1.5 text-[11px] font-black tracking-wider">
+            ⚠️ Offline Mode - {pendingCount > 0 ? `${pendingCount} queued • ` : ""}Net aate hi auto sync
+          </div>
+        )}
+        {/* FIX: Sirf tab dikhao jab sach me sync ho raha ho */}
+        {isOnline && isSyncing && (
+          <div className="bg-green-600 text-white text-center py-1.5 text-[11px] font-black tracking-wider animate-pulse">
+            🔄 Syncing {pendingCount} pending...
+          </div>
+        )}
+      </div>
 
-      {/* YAHI WALA COLLEGE NAVBAR - ADMIN KE LIYE */}
-      <nav className="flex justify-between items-center px-4 md:px-10 py-1.5 shadow-md sticky top-0 bg-white z-50">
-        <div className="flex items-center gap-4 cursor-pointer" onClick={()=>router.push("/admin")}>
-          <img src="/logo.png" className="h-20 w-20 md:h-[85px] md:w-[85px] object-contain" alt="Logo" onError={(e:any)=>{e.target.style.display='none'}} />
-          <div className="leading-tight text-justify">
-            <h1 className="text-[16px] md:text-[22px] font-black text-[#001f4d] uppercase leading-[0.9] tracking-wide">GOVT. GENERAL MUHAMMAD MUSA</h1>
-            <p className="text-[12px] md:text-[15px] font-extrabold text-[#001f4d] uppercase mt-1 tracking-wider">POSTGRADUATE COLLEGE QUETTA</p>
-            <p className="text-[10px] font-bold text-red-600 tracking-[0.2em] mt-1">ADMIN PANEL {isOnline ? "● Online" : "● Offline"} {pendingCount > 0 && `(${pendingCount})`}</p>
+      <nav className="flex justify-between items-center px-4 md:px-8 py-2 shadow-md sticky top-0 bg-white z-40 border-b">
+        <div className="flex items-center gap-3 cursor-pointer min-w-0" onClick={()=>router.push("/admin")}>
+          <img src="/logo.png" className="h-12 w-12 md:h-[64px] md:w-[64px] object-contain shrink-0" alt="Logo" onError={(e: any)=>{e.target.style.display='none'}} />
+          <div className="leading-tight min-w-0">
+            <h1 className="text-[12px] md:text-[16px] font-black text-[#001f4d] uppercase leading-[0.9] truncate">GOVT. GENERAL MUHAMMAD MUSA</h1>
+            <p className="text-[10px] md:text-[12px] font-extrabold text-[#001f4d] uppercase mt-0.5 tracking-wider truncate">POSTGRADUATE COLLEGE QUETTA</p>
+            <p className="text-[9px] font-bold text-red-600 tracking-[0.15em] mt-0.5">ADMIN • {isOnline ? "● Online" : "● Offline"} {pendingCount > 0 && !isSyncing ? `(${pendingCount})` : ""}</p>
           </div>
         </div>
         
-        <div className="hidden md:flex gap-3 items-center">
-          <button onClick={() => router.push("/admin")} className="font-bold text-[14px] bg-gray-100 px-5 py-2.5 rounded-lg hover:bg-gray-200">Dashboard</button>
-          <button onClick={() => router.push("/")} className="font-bold text-[14px] bg-white border px-5 py-2.5 rounded-lg hover:bg-gray-50">View Site</button>
-          <button onClick={() => {localStorage.removeItem("isAdminLoggedIn"); router.push("/admin/login")}} className="bg-red-600 text-white px-6 py-2.5 rounded-lg font-bold text-[14px]">Logout</button>
+        <div className="hidden md:flex gap-2 items-center shrink-0">
+          <button onClick={() => router.push("/admin")} className="font-bold text-[13px] bg-gray-100 px-4 py-2 rounded-full">Dashboard</button>
+          <button onClick={() => router.push("/")} className="font-bold text-[13px] bg-white border px-4 py-2 rounded-full">View Site</button>
+          <button onClick={() => {localStorage.removeItem("isAdminLoggedIn"); localStorage.removeItem("adminLoginTime"); router.replace("/admin/login")}} className="bg-red-600 text-white px-5 py-2 rounded-full font-bold text-[13px]">Logout</button>
         </div>
 
-        {/* Mobile */}
-        <div className="flex md:hidden gap-2 items-center">
-          <button onClick={() => router.push("/admin")} className="bg-gray-100 px-4 py-2 rounded-lg font-bold text-[12px]">Dashboard</button>
-          <button onClick={() => {localStorage.removeItem("isAdminLoggedIn"); router.push("/admin/login")}} className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-[12px]">Logout</button>
+        <div className="flex md:hidden gap-1.5 items-center shrink-0">
+          <button onClick={() => router.push("/admin")} className="bg-gray-100 px-3 py-2 rounded-full font-black text-[11px]">Home</button>
+          <button onClick={() => {localStorage.removeItem("isAdminLoggedIn"); localStorage.removeItem("adminLoginTime"); router.replace("/admin/login")}} className="bg-red-600 text-white px-3 py-2 rounded-full font-black text-[11px]">Out</button>
         </div>
       </nav>
 
-      <main>{children}</main>
+      <main>
+        {!authChecked ? (
+          <div className="min-h-[60vh] flex items-center justify-center"><div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" /></div>
+        ) : (
+          children
+        )}
+      </main>
     </div>
   );
 }

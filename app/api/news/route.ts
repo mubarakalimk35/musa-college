@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+const noStore = { "Cache-Control": "no-store" } as const;
+
 export async function GET() {
   try {
-    const news = await prisma.news.findMany({ orderBy: { createdAt: 'desc' } });
-    const events = await prisma.event.findMany({ orderBy: { createdAt: 'desc' } });
+    const [news, events] = await Promise.all([
+      prisma.news.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.event.findMany({ orderBy: { createdAt: 'desc' } }),
+    ]);
     
     const combined = [
       ...news.map((n: any) => ({ 
@@ -31,83 +35,94 @@ export async function GET() {
       }))
     ].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return NextResponse.json(combined, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(combined, { headers: noStore });
   } catch (e) {
-    console.error("DB DOWN:", e);
-    return NextResponse.json({ error: "DB_DOWN" }, { status: 500, headers: { "Cache-Control": "no-store" } });
+    console.error("NEWS GET DB DOWN:", e);
+    return NextResponse.json([], { headers: noStore }); // FIX: Error par [] bhejo, DB_DOWN se frontend crash hota hai
   }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    
-    // 1. Handle offline delete
-    if (body._method === "DELETE" && body.id) {
+    const id = body.id || body._id;
+
+    // 1. Offline Delete (AdminLayout se aata hai)
+    if (body._method === "DELETE" && id) {
       try {
-        await prisma.news.delete({ where: { id: body.id } });
+        await prisma.news.delete({ where: { id } });
       } catch {
-        await prisma.event.delete({ where: { id: body.id } });
+        await prisma.event.delete({ where: { id } });
       }
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true }, { headers: noStore });
     }
 
-    // 2. Handle ticker toggle from right side list
-    if (body._method === "PATCH" && body.id) {
+    // 2. Offline PATCH - Ticker Toggle
+    if (body._method === "PATCH" && id) {
+      const data = { isTicker: !!body.isTicker };
       if (body.category === "Events") {
-        const updated = await prisma.event.update({
-          where: { id: body.id },
-          data: { isTicker: body.isTicker }
-        });
-        return NextResponse.json(updated);
+        const updated = await prisma.event.update({ where: { id }, data });
+        return NextResponse.json(updated, { headers: noStore });
       } else {
-        const updated = await prisma.news.update({
-          where: { id: body.id },
-          data: { isTicker: body.isTicker }
-        });
-        return NextResponse.json(updated);
+        const updated = await prisma.news.update({ where: { id }, data });
+        return NextResponse.json(updated, { headers: noStore });
       }
+    }
+
+    // 3. Create New
+    if (!body.title?.trim()) {
+      return NextResponse.json({ error: "Title required" }, { status: 400, headers: noStore });
     }
 
     if (body.category === "Events") {
       const created = await prisma.event.create({
         data: {
-          title: body.title,
+          title: body.title.trim(),
           description: body.description || body.content || "No description",
           eventDate: body.date ? new Date(body.date) : new Date(),
           location: body.location || "College Campus",
           time: body.time || "",
-          isTicker: body.isTicker || false,
+          isTicker: !!body.isTicker,
         }
       });
-      return NextResponse.json(created);
+      return NextResponse.json(created, { status: 201, headers: noStore });
     } else {
       const created = await prisma.news.create({
         data: {
-          title: body.title,
+          title: body.title.trim(),
           content: body.description || body.content || "No description",
           date: body.date ? new Date(body.date) : new Date(),
-          isTicker: body.isTicker || false,
+          isTicker: !!body.isTicker,
         }
       });
-      return NextResponse.json(created);
+      return NextResponse.json(created, { status: 201, headers: noStore });
     }
   } catch (e: any) {
-    console.error("POST ERROR:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error("NEWS POST ERROR:", e);
+    return NextResponse.json({ error: e.message }, { status: 500, headers: noStore });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    const { id } = await req.json();
+    let id: string | null = null;
+    try {
+      const body = await req.json();
+      id = body.id || body._id || null;
+    } catch {}
+    if (!id) {
+      id = new URL(req.url).searchParams.get("id");
+    }
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400, headers: noStore });
+
     try {
       await prisma.news.delete({ where: { id } });
     } catch {
       await prisma.event.delete({ where: { id } });
     }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: noStore });
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error("NEWS DELETE ERROR:", e);
+    return NextResponse.json({ error: e.message }, { status: 500, headers: noStore });
   }
 }

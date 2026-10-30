@@ -11,59 +11,61 @@ const defaultData = {
   principalImage: ""
 };
 
+const noStore = { "Cache-Control": "no-store" };
+
 export async function GET() {
   try {
-    let data = await prisma.contactInfo.findFirst();
+    let data = await prisma.contactInfo.findFirst({ orderBy: { id: 'asc' } });
     if (!data) {
-      // Pehli baar default create kar do
-      data = await prisma.contactInfo.create({ data: defaultData });
+      try {
+        data = await prisma.contactInfo.create({ data: defaultData });
+      } catch {
+        // race condition - dobara fetch
+        data = await prisma.contactInfo.findFirst({ orderBy: { id: 'asc' } });
+      }
     }
-    return NextResponse.json(data, {
-      headers: { "Cache-Control": "no-store" }
-    });
+    return NextResponse.json(data || defaultData, { headers: noStore });
   } catch (e) {
     console.error(e);
-    return NextResponse.json(defaultData);
+    return NextResponse.json(defaultData, { headers: noStore });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // body = { address, phone, email, mapLink, principalName, principalMsg, principalImage }
     
-    const existing = await prisma.contactInfo.findFirst();
-    
+    const existing = await prisma.contactInfo.findFirst({ orderBy: { id: 'asc' } });
+
+    // Safe merge - jo field nahi bheja usko null mat karo, purana rakho
+    const dataToSave: any = {};
+    if (body.address !== undefined) dataToSave.address = body.address;
+    if (body.phone !== undefined) dataToSave.phone = body.phone;
+    if (body.email !== undefined) dataToSave.email = body.email;
+    if (body.mapLink || body.mapUrl) dataToSave.mapLink = body.mapLink || body.mapUrl;
+    if (body.principalName !== undefined) dataToSave.principalName = body.principalName || null;
+    if (body.principalMsg !== undefined) dataToSave.principalMsg = body.principalMsg || null;
+    if (body.principalImage !== undefined) dataToSave.principalImage = body.principalImage || null;
+
+    if(Object.keys(dataToSave).length === 0){
+      return NextResponse.json({ success: false, error: "No data to save" }, { status: 400 });
+    }
+
     let saved;
     if (existing) {
       saved = await prisma.contactInfo.update({
         where: { id: existing.id },
-        data: {
-          address: body.address,
-          phone: body.phone,
-          email: body.email,
-          mapLink: body.mapLink || body.mapUrl,
-          principalName: body.principalName || null,
-          principalMsg: body.principalMsg || null,
-          principalImage: body.principalImage || null,
-        }
+        data: dataToSave
       });
     } else {
       saved = await prisma.contactInfo.create({
-        data: {
-          address: body.address,
-          phone: body.phone,
-          email: body.email,
-          mapLink: body.mapLink || body.mapUrl,
-          principalName: body.principalName || null,
-          principalMsg: body.principalMsg || null,
-          principalImage: body.principalImage || null,
-        }
+        data: { ...defaultData, ...dataToSave }
       });
     }
 
-    return NextResponse.json({ success: true, data: saved });
+    return NextResponse.json({ success: true, data: saved }, { headers: noStore });
   } catch (e: any) {
+    console.error("Contact POST Error:", e.message);
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }
 }

@@ -19,7 +19,7 @@ model Admission {
   domicile    String
   mobile      String
   address     String   @db.Text
-  createdAt   String
+  createdAt   DateTime @default(now())  // FIX: String se DateTime kiya
   status      String   @default("PENDING")
 
   @@map("admissions")
@@ -28,7 +28,7 @@ model Admission {
 // --- HOME PAGE ---
 model HomeHero {
   id        String   @id @default(cuid())
-  image     String
+  image     String   @db.Text
   order     Int      @default(0)
   createdAt DateTime @default(now())
 }
@@ -43,27 +43,27 @@ model HomeStats {
 
 // --- FACULTY ---
 model Faculty {
-  id          String   @id @default(cuid())
-  name        String
-  designation String
-  department  String
+  id            String   @id @default(cuid())
+  name          String
+  designation   String
+  department    String
   qualification String?
-  image       String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
+  image         String?  @db.Text
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
 }
 
 // --- CONTACT PAGE ---
 model ContactInfo {
-  id        String   @id @default(cuid())
-  address   String   @db.Text
-  phone     String
-  email     String
-  mapLink   String?  @db.Text
+  id             String   @id @default(cuid())
+  address        String   @db.Text
+  phone          String
+  email          String
+  mapLink        String?  @db.Text
   principalName  String?
-  principalMsg   String? @db.Text
-  principalImage String?
-  updatedAt DateTime @updatedAt
+  principalMsg   String?  @db.Text
+  principalImage String?  @db.Text
+  updatedAt      DateTime @updatedAt
 }
 
 // --- NEWS & EVENTS ---
@@ -71,7 +71,7 @@ model News {
   id        String   @id @default(cuid())
   title     String
   content   String   @db.Text
-  image     String?
+  image     String?  @db.Text
   date      DateTime @default(now())
   category  String   @default("News")
   isTicker  Boolean  @default(false)
@@ -82,11 +82,38 @@ model Event {
   id          String   @id @default(cuid())
   title       String
   description String   @db.Text
-  image       String?
+  image       String?  @db.Text
   eventDate   DateTime @default(now())
   location    String?
   time        String?
   category    String   @default("Events")
   isTicker    Boolean  @default(false)
   createdAt   DateTime @default(now())
+}
+
+// --- GALLERY - FIXED ---
+model Gallery {
+  id        String   @id @default(cuid())
+  title     String
+  category  String   @default("General")
+  image     String   @db.Text  // FIX: imageUrl ko image kar diya taake aapka purana code chal jaye
+  imageUrl  String?  @db.Text  // purana data bachane ke liye optional rakha
+  createdAt DateTime @default(now())
+}
+
+// --- DOWNLOADS & NOTICES (Aapke api/downloads ke liye zaroori) ---
+model Download {
+  id        String   @id @default(cuid())
+  title     String
+  fileUrl   String   @db.Text
+  category  String   @default("General")
+  createdAt DateTime @default(now())
+}
+
+model Notice {
+  id        String   @id @default(cuid())
+  title     String
+  fileUrl   String?  @db.Text
+  content   String?  @db.Text
+  createdAt DateTime @default(now())
 }

@@ -3,10 +3,16 @@ import { prisma } from "@/lib/db";
 
 export async function GET() {
   try {
-    // Neon ko jagane ke liye halka query
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ awake: true, time: new Date().toISOString() });
+    return NextResponse.json(
+      { awake: true, time: new Date().toISOString() },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (e) {
-    return NextResponse.json({ awake: false }, { status: 500 });
+    console.error("Keep-Alive Failed:", e);
+    return NextResponse.json(
+      { awake: false },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }

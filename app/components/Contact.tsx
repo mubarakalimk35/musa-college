@@ -10,16 +10,20 @@ export default function Contact() {
   });
 
   useEffect(() => {
-    const fetchData = () => {
-      fetch(`/api/contact?t=${Date.now()}`, { cache: "no-store" })
-        .then(res => res.json())
-        .then(data => { if (data?.address) setContact(data); })
-        .catch(()=>{});
-    };
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    fetch(`/api/contact?t=${Date.now()}`, { cache: "no-store" })
+      .then(res => res.json())
+      .then(data => { 
+        if (data?.address) {
+          setContact({
+            address: data.address || "Gulistan Town, Quetta, Balochistan",
+            phone: data.phone || "081-2669085",
+            email: data.email || "mubarakali.mk.35@gmail.com",
+            mapUrl: data.mapLink || data.mapUrl || "https://www.google.com/maps?q=Govt+General+Muhammad+Musa+Postgraduate+College+Quetta&z=15&output=embed"
+          });
+        }
+      })
+      .catch(()=>{});
+  }, []); // sirf 1 baar load - interval hata diya
 
   return (
     <section id="contact" className="px-6 md:px-20 py-16 bg-gray-50">
@@ -34,7 +38,7 @@ export default function Contact() {
           </div>
         </div>
         <div className="bg-white p-2 rounded-xl shadow">
-          <iframe src={contact.mapUrl} width="100%" height="420" style={{border:0}} className="rounded-lg" loading="lazy"></iframe>
+          <iframe src={contact.mapUrl} width="100%" height="420" style={{border:0}} className="rounded-lg" loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
         </div>
       </div>
     </section>
