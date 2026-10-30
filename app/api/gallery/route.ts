@@ -1,10 +1,7 @@
-export const runtime = 'nodejs';
-
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 
 const noStore = { "Cache-Control": "no-store, no-cache, must-revalidate" }
-// Prisma enum ke hisab se - space wala nahi chalega
 const ALLOWED_CATEGORIES = ["General", "Sports_Week", "Convocation"] as const
 
 export async function GET(req: Request) {
@@ -19,7 +16,6 @@ export async function GET(req: Request) {
     if (category && ALLOWED_CATEGORIES.includes(category as any)) {
       where.category = category
     }
-    // "Sports Week" ko bhi handle karna hai
     if (category === "Sports Week") {
       where.category = "Sports_Week"
     }
@@ -34,7 +30,7 @@ export async function GET(req: Request) {
       title: g.title,
       category: g.category,
       image: g.image,
-      imageUrl: g.image, // frontend ke liye dono bhej rahe hain, DB me sirf image save hai
+      imageUrl: g.image,
       createdAt: g.createdAt,
     }))
 
@@ -69,7 +65,7 @@ export async function POST(req: Request) {
       data: {
         title: title.trim(),
         category: safeCategory,
-        image: finalImage, // <-- FIX: sirf 'image' bhejo, 'imageUrl' mat bhejo
+        image: finalImage,
       }
     })
 
