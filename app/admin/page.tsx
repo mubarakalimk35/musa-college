@@ -1,5 +1,4 @@
-import AdminDashboardClient from "./AdminDashboardClient";
-export const instant = false;
+﻿import AdminDashboardClient from "./AdminDashboardClient";
 export default function AdminPage() {
   return <AdminDashboardClient />;
 }

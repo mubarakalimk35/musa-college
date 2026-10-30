@@ -1,5 +1,4 @@
-import NewsClient from "./NewsClient";
-export const instant = false;
+﻿import NewsClient from "./NewsClient";
 export default function Page() {
   return <NewsClient />;
 }
