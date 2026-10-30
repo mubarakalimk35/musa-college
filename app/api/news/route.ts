@@ -38,7 +38,7 @@ export async function GET() {
     return NextResponse.json(combined, { headers: noStore });
   } catch (e) {
     console.error("NEWS GET DB DOWN:", e);
-    return NextResponse.json([], { headers: noStore }); // FIX: Error par [] bhejo, DB_DOWN se frontend crash hota hai
+    return NextResponse.json({ error: "DB offline", offline: true, data: [] }, { status: 503, headers: noStore });
   }
 }
 

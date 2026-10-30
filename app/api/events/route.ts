@@ -1,18 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-const fallbackEvents = [
-  {
-    id: "1",
-    title: "Annual Sports Day 2025",
-    description: "Annual sports day will be held at college ground.",
-    image: "",
-    location: "College Ground, Quetta",
-    eventDate: new Date().toISOString(),
-    createdAt: new Date().toISOString()
-  }
-];
-
 export async function GET() {
   try {
     const data = await prisma.event.findMany({
@@ -21,7 +9,7 @@ export async function GET() {
     return NextResponse.json(data);
   } catch (e) {
     console.error("Event GET Error:", e);
-    return NextResponse.json(fallbackEvents);
+    return NextResponse.json({ error: "DB offline", offline: true }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }
 

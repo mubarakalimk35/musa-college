@@ -47,10 +47,14 @@ export default function AdminDashboardClient() {
       <div className="max-w-6xl mx-auto">
         <div className="bg-white border border-gray-100 rounded-[20px] p-5 md:p-6 flex items-center shadow-[0_8px_24px_rgba(0,0,0,0.04)] gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 bg-[#0d1b34] rounded-xl flex items-center justify-center text-white font-black shrink-0">M</div>
+            {/* FIXED: Admin Dashboard ka icon */}
+            <div className="w-11 h-11 bg-[#0d2a54] rounded-xl flex items-center justify-center text-white text-[20px] shrink-0 shadow">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            </div>
             <div className="min-w-0">
               <h1 className="text-[18px] md:text-2xl font-black tracking-tight leading-none truncate">Admin Dashboard</h1>
-              <p className="text-[11px] md:text-[13px] text-gray-500 font-medium mt-1 truncate">Govt. General Muhammad Musa College • Quetta</p>
+              {/* FIXED: Postgraduate added */}
+              <p className="text-[11px] md:text-[13px] text-gray-500 font-medium mt-1 truncate">Govt. General Muhammad Musa Postgraduate College • Quetta</p>
             </div>
           </div>
         </div>
@@ -67,8 +71,6 @@ export default function AdminDashboardClient() {
             </Link>
           ))}
         </div>
-
-        <p className="text-[10px] text-center text-gray-300 mt-8 tracking-widest uppercase font-bold">Est. 1987 • Sariab Road Quetta • Secure Access Only</p>
       </div>
     </div>
   );

@@ -96,7 +96,7 @@ export default function ApplyPage() {
                 <select name="program" value={formData.program} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl bg-white text-[15px] font-semibold outline-none focus:border-blue-600">
                   <option value="">Select Program</option>
                   <option>FSc Pre-Medical</option><option>FSc Pre-Engineering</option><option>FA</option><option>ICS</option>
-                  <option>BS Computer Science</option><option>BS English</option><option>BS Physics</option><option>BS Mathematics</option><option>BS Zoology</option>
+                  <option>BS Computer Science</option><option>BS English</option><option>BS Physics</option><option>BS Mathematics</option><option>BS Zoology</option><option>BS Economics</option><option>BS Microbiology</option>
                 </select>
               </div>
               <div><label className="text-[13px] font-black text-gray-900">Student Name *</label><input name="studentName" value={formData.studentName} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Full Name" /></div>

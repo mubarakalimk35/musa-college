@@ -1,97 +1,136 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { offlinePost } from "@/lib/offlineSync";
 
-const defaultDocs = [
-  { id: "1", title: "College Prospectus 2025-26", type: "Prospectus", size: "5.4 MB", file: "/downloads/prospectus.pdf", icon: "📘" },
-  { id: "2", title: "BS Admission Form 2025-26", type: "Admission Form", size: "2.1 MB", file: "/downloads/admission-form.pdf", icon: "📄" },
-  { id: "3", title: "Scholarship Form 2025-26", type: "Scholarship Form", size: "1.5 MB", file: "/downloads/scholarship-form.pdf", icon: "🎓" },
-  { id: "4", title: "FSc Time Table 2025", type: "FSc Time Table", size: "980 KB", file: "/downloads/fsc-timetable.pdf", icon: "🕒" },
-  { id: "5", title: "BS Time Table 2025", type: "BS Time Table", size: "1.1 MB", file: "/downloads/bs-timetable.pdf", icon: "🕒" },
-  { id: "6", title: "BS Exam Date Sheet 2025", type: "Date Sheet", size: "890 KB", file: "/downloads/date-sheet.pdf", icon: "📅" },
-  { id: "7", title: "BS Annual Result 2025", type: "Result", size: "2.3 MB", file: "/downloads/result.pdf", icon: "📊" },
-];
+const TYPES = ["Prospectus", "Admission Form", "Scholarship Form", "FSc Time Table", "BS Time Table", "Date Sheet", "Result"] as const;
+type DocType = typeof TYPES[number];
+type Doc = { id: number; title: string; type: DocType; file: string; };
 
-export default function DownloadsPage() {
-  const [filter, setFilter] = useState("All");
-  const [documents, setDocuments] = useState<any[]>(defaultDocs);
+const getIcon = (type?: string) => {
+  const t = (type || "").toLowerCase();
+  if (t.includes("prospectus")) return "📘";
+  if (t.includes("admission")) return "📝";
+  if (t.includes("scholarship")) return "🎓";
+  if (t.includes("time table")) return "🕒";
+  if (t.includes("date sheet")) return "📅";
+  if (t.includes("result")) return "📊";
+  return "📄";
+};
+
+export default function AdminDownloads() {
+  const router = useRouter();
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<DocType>(TYPES[0]);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
-  const types = ["All", "Prospectus", "Admission Form", "Scholarship Form", "FSc Time Table", "BS Time Table", "Date Sheet", "Result"];
-  
-  useEffect(() => {
-    const loadDocs = async () => {
-      try {
-        const res = await fetch("/api/downloads", { cache: "no-store" });
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((d: any) => ({
-            ...d,
-            icon: d.type?.includes("Prospectus") ? "📘" : d.type?.includes("Result") ? "📊" : d.type?.includes("Date") ? "📅" : d.type?.includes("Scholarship") ? "🎓" : "📄",
-            size: d.size || "PDF File"
-          }));
-          setDocuments(mapped);
-          localStorage.setItem("cached_downloads", JSON.stringify(mapped));
-        }
-      } catch {
-        const cached = localStorage.getItem("cached_downloads");
-        if (cached) {
-          try { setDocuments(JSON.parse(cached)); } catch {}
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadDocs();
+
+  const load = useCallback(async (signal?: AbortSignal) => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/downloads", { signal, cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      setDocs(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      if (e.name !== "AbortError") console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
-  
-  const filtered = filter === "All" ? documents : documents.filter(d => d.type === filter);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    load(ac.signal);
+    return () => ac.abort();
+  }, [load]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const cleanTitle = title.trim();
+    if (!cleanTitle) { alert("Title is required!"); return; }
+    if (cleanTitle.length > 100) { alert("Title max 100 chars"); return; }
+    if (!file) return;
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) { alert("File 10MB se bara nahi ho sakta"); e.target.value = ""; return; }
+    if (!navigator.onLine) { alert("File upload ke liye internet chahiye."); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const upRes = await fetch("/api/upload", { method: "POST", body: fd });
+      const upData = await upRes.json();
+      if (!upRes.ok || upData.error) throw new Error(upData.error || "Upload failed");
+      const newId = Date.now() + Math.floor(Math.random() * 1000);
+      await offlinePost("/api/downloads", { id: newId, title: cleanTitle, type, file: upData.url });
+      setTitle(""); e.target.value = ""; await load();
+    } catch (err: any) { alert(err.message); } finally { setUploading(false); }
+  };
+
+  const del = async (doc: Doc) => {
+    if (!confirm(`Delete "${doc.title}"?`)) return;
+    const prev = docs;
+    setDocs(prev => prev.filter(d => d.id !== doc.id));
+    try { await offlinePost("/api/downloads", { id: doc.id, _method: "DELETE" }); }
+    catch { setDocs(prev); alert("Delete failed"); }
+  };
+
+  const totalLabel = useMemo(() => `${docs.length} Files`, [docs.length]);
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-4 md:p-8">
-        <Link href="/" className="inline-block mb-6 text-sm font-bold bg-white px-4 py-2 rounded-full shadow hover:bg-slate-900 hover:text-white transition-all">← Back to Home</Link>
-
-        <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10">
-          <div className="text-center mb-10">
-            <span className="bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-xs font-bold tracking-widest">RESOURCES</span>
-            <h2 className="text-3xl md:text-4xl font-black text-[#0d2a54] mt-3">Downloads Center</h2>
-            <p className="text-gray-500 text-[13px] mt-2">All important forms and documents</p>
-          </div>
-
-          <div className="flex gap-2 flex-wrap justify-center mb-8">
-            {types.map((t) => (
-              <button 
-                key={t} 
-                onClick={() => setFilter(t)} 
-                className={`px-5 py-2 rounded-full text-[12px] font-bold border transition-all ${filter === t ? 'bg-[#0d2a54] text-white shadow-lg scale-105' : 'bg-white text-gray-600 hover:bg-gray-100'}`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {loading ? (
-            <div className="text-center py-10 text-sm text-slate-400">Loading documents...</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {filtered.map((doc) => (
-                <div key={doc.id || doc.file} className="bg-gray-50 border-2 border-gray-100 rounded-2xl p-5 flex gap-4 items-center hover:shadow-lg hover:border-blue-200 transition-all">
-                  <div className="w-14 h-14 bg-white border rounded-xl flex items-center justify-center text-2xl shadow-sm shrink-0">{doc.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-[13px] text-[#0d2a54] leading-tight truncate">{doc.title}</h4>
-                    <span className="text-[11px] text-gray-500 font-medium">{doc.size} • {doc.type}</span>
-                  </div>
-                  <a href={doc.file} target="_blank" rel="noopener noreferrer" className="bg-[#0d2a54] text-white px-4 py-2 rounded-full text-[11px] font-black hover:bg-blue-800 shrink-0">Open</a>
-                </div>
-              ))}
+    <div className="min-h-screen bg-white p-3 md:p-4 font-sans flex flex-col">
+      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1">
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => router.push("/admin")} className="w-10 h-10 shrink-0 bg-black text-white border-2 border-black rounded-full flex items-center justify-center font-black hover:bg-white hover:text-black">←</button>
+            <div className="min-w-0">
+              <h1 className="text-xl md:text-2xl font-black text-black leading-none truncate">Downloads Manager</h1>
+              <p className="text-[13px] font-black text-black mt-1">Manage all college resources</p>
             </div>
-          )}
+          </div>
+          <div className="bg-white px-3 md:px-4 py-1.5 rounded-full border-2 border-black text-xs font-black text-black shrink-0">Total: {totalLabel}</div>
+        </div>
 
-          {!loading && filtered.length === 0 && (
-            <p className="text-center text-gray-400 mt-10">No documents found in {filter}.</p>
-          )}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
+          <div className="md:col-span-2 bg-white rounded-2xl border-2 border-black p-4 md:p-5">
+            <h2 className="font-black text-black text-lg">New Upload</h2>
+            <p className="text-sm font-black text-black mb-4">Upload file from here</p>
+            <div className="space-y-3">
+              <div><label className="text-[11px] font-black text-black uppercase">Document Title</label><input value={title} onChange={e => setTitle(e.target.value)} maxLength={100} placeholder="Ex: BEEF Scholarship 2026" className="w-full mt-1 border-2 border-black p-3 rounded-xl text-sm bg-white text-black font-black placeholder:text-black placeholder:opacity-60 outline-none focus:ring-2 focus:ring-black" /></div>
+              <div><label className="text-[11px] font-black text-black uppercase">Category</label><select value={type} onChange={e => setType(e.target.value as DocType)} className="w-full mt-1 border-2 border-black p-3 rounded-xl text-sm bg-white text-black font-black">{TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+              <label className="w-full flex flex-col items-center justify-center border-2 border-dashed border-black rounded-xl cursor-pointer py-8 hover:bg-gray-50">
+                <div className="text-2xl">{uploading ? "⏳" : "📄"}</div>
+                <span className="text-sm font-black text-black mt-1">{uploading ? "Uploading..." : "Click to Upload"}</span>
+                <span className="text-[11px] font-bold text-black">PDF, JPG, PNG - Max 10MB</span>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onChange={handleUpload} disabled={uploading} />
+              </label>
+            </div>
+          </div>
+
+          <div className="md:col-span-3 bg-white rounded-2xl border-2 border-black p-4 md:p-5 flex flex-col h-auto max-h-[420px]">
+            <div className="flex items-center justify-between mb-3 shrink-0">
+              <h2 className="font-black text-black">Uploaded Documents</h2>
+            </div>
+            <div className="space-y-2 overflow-auto flex-1 pr-1">
+              {loading ? <div className="text-center py-6 text-black font-black text-sm">Loading...</div> : docs.length === 0 ? <div className="text-center py-6 text-black font-black text-sm">No files yet</div> : 
+                docs.map((d) => (
+                  <div key={d.id} className="flex items-center gap-3 p-2.5 rounded-xl border-2 border-black bg-white">
+                    <div className="w-10 h-10 shrink-0 bg-white border-2 border-black text-lg rounded-xl flex items-center justify-center">{getIcon(d.type)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-black truncate">{d.title}</p>
+                      <span className="bg-white text-black border-2 border-black px-2 py-0.5 rounded-full text-[10px] font-black inline-block mt-1">{(d.type || "FILE").toUpperCase()}</span>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <a href={d.file} target="_blank" className="w-8 h-8 bg-white border-2 border-black rounded-lg flex items-center justify-center text-sm font-black text-black hover:bg-gray-100">↗</a>
+                      <button onClick={() => del(d)} className="w-8 h-8 bg-white border-2 border-black rounded-lg flex items-center justify-center text-sm font-black text-black hover:bg-red-50">✕</button>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

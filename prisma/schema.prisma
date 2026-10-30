@@ -7,113 +7,157 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Admission {
-  id          Int      @id @default(autoincrement())
-  program     String
-  studentName String
-  fatherName  String
-  dob         String
-  cnic        String
-  religion    String
-  nationality String
-  domicile    String
-  mobile      String
-  address     String   @db.Text
-  createdAt   DateTime @default(now())  // FIX: String se DateTime kiya
-  status      String   @default("PENDING")
+enum AdmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
+enum NewsCategory {
+  News
+  Notice
+  Ticker
+}
+
+enum GalleryCategory {
+  General
+  Sports_Week
+  Convocation
+}
+
+model Admission {
+  id          Int            @id @default(autoincrement())
+  program     String           @db.VarChar(100)
+  studentName String           @db.VarChar(100)
+  fatherName  String           @db.VarChar(100)
+  dob         DateTime         // String se DateTime
+  cnic        String           @db.VarChar(15) @unique // ek CNIC ek hi admission
+  religion    String           @db.VarChar(50)
+  nationality String           @db.VarChar(50)
+  domicile    String           @db.VarChar(50)
+  mobile      String           @db.VarChar(15)
+  address     String           @db.Text
+  status      AdmissionStatus  @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status, createdAt]) // admin filter fast
+  @@index([program])
   @@map("admissions")
 }
 
-// --- HOME PAGE ---
 model HomeHero {
   id        String   @id @default(cuid())
   image     String   @db.Text
   order     Int      @default(0)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order, isActive])
 }
 
 model HomeStats {
   id        String   @id @default(cuid())
-  label     String
-  value     String
+  label     String   @db.VarChar(100)
+  value     String   @db.VarChar(100)
   order     Int      @default(0)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
 }
 
-// --- FACULTY ---
 model Faculty {
   id            String   @id @default(cuid())
-  name          String
-  designation   String
-  department    String
-  qualification String?
+  name          String   @db.VarChar(100)
+  designation   String   @db.VarChar(100)
+  department    String   @db.VarChar(100)
+  qualification String?  @db.VarChar(200)
   image         String?  @db.Text
   order         Int      @default(0)
+  isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([department, order])
+  @@index([designation])
 }
 
-// --- CONTACT PAGE ---
 model ContactInfo {
   id             String   @id @default(cuid())
   address        String   @db.Text
-  phone          String
-  email          String
+  phone          String   @db.VarChar(20)
+  email          String   @db.VarChar(100)
   mapLink        String?  @db.Text
-  principalName  String?
+  principalName  String?  @db.VarChar(100)
   principalMsg   String?  @db.Text
   principalImage String?  @db.Text
   updatedAt      DateTime @updatedAt
 }
 
-// --- NEWS & EVENTS ---
 model News {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text
-  image     String?  @db.Text
-  date      DateTime @default(now())
-  category  String   @default("News")
-  isTicker  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id        String       @id @default(cuid())
+  title     String       @db.VarChar(200)
+  content   String       @db.Text
+  image     String?      @db.Text
+  date      DateTime     @default(now())
+  category  String       @default("News")
+  isTicker  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([category, createdAt])
+  @@index([isTicker])
 }
 
 model Event {
   id          String   @id @default(cuid())
-  title       String
+  title       String   @db.VarChar(200)
   description String   @db.Text
   image       String?  @db.Text
   eventDate   DateTime @default(now())
-  location    String?
-  time        String?
+  location    String?  @db.VarChar(150)
+  time        String?  @db.VarChar(50)
   category    String   @default("Events")
   isTicker    Boolean  @default(false)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([eventDate])
+  @@index([category])
 }
 
-// --- GALLERY - FIXED ---
 model Gallery {
-  id        String   @id @default(cuid())
-  title     String
-  category  String   @default("General")
-  image     String   @db.Text  // FIX: imageUrl ko image kar diya taake aapka purana code chal jaye
-  imageUrl  String?  @db.Text  // purana data bachane ke liye optional rakha
-  createdAt DateTime @default(now())
+  id        String          @id @default(cuid())
+  title     String          @db.VarChar(150)
+  category  GalleryCategory @default(General)
+  image     String          @db.Text // sirf ek hi rakho
+  // imageUrl hata do future me jab purana data migrate ho jaye
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([category, createdAt])
 }
 
-// --- DOWNLOADS & NOTICES (Aapke api/downloads ke liye zaroori) ---
 model Download {
   id        String   @id @default(cuid())
-  title     String
+  title     String   @db.VarChar(200)
   fileUrl   String   @db.Text
   category  String   @default("General")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
 }
 
 model Notice {
   id        String   @id @default(cuid())
-  title     String
+  title     String   @db.VarChar(200)
   fileUrl   String?  @db.Text
   content   String?  @db.Text
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
 }

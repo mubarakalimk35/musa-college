@@ -26,7 +26,7 @@ export async function GET() {
     });
   } catch (e) {
     console.error("Home GET Error:", e);
-    return NextResponse.json(fallbackData, { headers: noStore });
+    return NextResponse.json({ error: "DB offline", offline: true, hero: [], stats: [] }, { status: 503, headers: noStore });
   }
 }
 

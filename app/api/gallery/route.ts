@@ -1,59 +1,89 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 
-const noStore = { "Cache-Control": "no-store" }
+const noStore = { "Cache-Control": "no-store, no-cache, must-revalidate" }
+// Prisma enum ke hisab se rakho - space nahi underscore
+const ALLOWED_CATEGORIES = ["General", "Sports Week", "Convocation", "Sports_Week"] as const
 
-// GET - saari images lana
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const gallery = await prisma.gallery.findMany({ 
-      orderBy: { createdAt: 'desc' } 
-    })
-    return NextResponse.json(gallery, { headers: noStore })
-  } catch (e:any) {
+    const { searchParams } = new URL(req.url)
+    const page = Math.min(100, Math.max(1, parseInt(searchParams.get("page") || "1")))
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")))
+    const category = searchParams.get("category")?.trim()
+    const skip = (page - 1) * limit
+
+    const where: any = {}
+    if (category && ALLOWED_CATEGORIES.includes(category as any)) {
+      // DB me underscore wali value bhi handle
+      where.category = category
+    }
+
+    const [gallery, total] = await Promise.all([
+      prisma.gallery.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      prisma.gallery.count({ where })
+    ])
+
+    const mapped = gallery.map((g: any) => ({
+      id: g.id,
+      title: g.title,
+      category: g.category,
+      image: g.image || g.imageUrl,
+      imageUrl: g.imageUrl || g.image,
+      createdAt: g.createdAt,
+    }))
+
+    return NextResponse.json({ data: mapped, total, page, totalPages: Math.ceil(total / limit) }, { headers: noStore })
+  } catch (e: any) {
     console.error("Gallery GET Error:", e.message)
-    return NextResponse.json([], { headers: noStore })
+    return NextResponse.json({ error: "DB offline", offline: true, data: [], total: 0, page: 1, totalPages: 0 }, { status: 503, headers: noStore })
   }
 }
 
-// POST - nayi image add karna
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { title, category, imageUrl } = body
+    const { title, category, imageUrl, image } = body
+    const finalImage = (imageUrl || image)?.trim()
 
-    if (!title?.trim() || !imageUrl?.trim()) {
-      return NextResponse.json({ error: "Title & Image required" }, { status: 400, headers: noStore })
+    if (!title?.trim() || title.trim().length < 2 || title.trim().length > 150) {
+      return NextResponse.json({ error: "Title must be 2-150 chars" }, { status: 400, headers: noStore })
+    }
+    if (!finalImage || finalImage.length > 5000) {
+      return NextResponse.json({ error: "Valid Image URL required" }, { status: 400, headers: noStore })
+    }
+    // URL format check
+    try { new URL(finalImage) } catch { 
+      return NextResponse.json({ error: "Invalid image URL format" }, { status: 400, headers: noStore }) 
     }
 
+    const safeCategory = ALLOWED_CATEGORIES.includes(category as any) ? category : "General"
+
     const newImage = await prisma.gallery.create({
-      data: { 
-        title: title.trim(), 
-        category: category?.trim() || "General", 
-        image: imageUrl.trim() // ✅ FIX: schema me 'image' hai, 'imageUrl' nahi
+      data: {
+        title: title.trim(),
+        category: safeCategory,
+        image: finalImage,
+        imageUrl: finalImage,
       }
     })
-    return NextResponse.json(newImage, { headers: noStore })
-  } catch (e:any) {
-    console.error("Gallery POST Error:", e.message)
-    return NextResponse.json({ error: e.message }, { status: 500, headers: noStore })
+
+    return NextResponse.json({ ...newImage, imageUrl: newImage.image }, { status: 201, headers: noStore })
+  } catch (e: any) {
+    console.error("Gallery POST Error:", e)
+    return NextResponse.json({ error: "DB save failed" }, { status: 500, headers: noStore })
   }
 }
 
-// DELETE - image delete karna
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const id = searchParams.get("id")
+    const id = searchParams.get("id")?.trim()
+    if (!id) return NextResponse.json({ error: "ID missing" }, { status: 400, headers: noStore })
 
-    if (!id) {
-      return NextResponse.json({ error: "ID missing" }, { status: 400, headers: noStore })
-    }
-
-    await prisma.gallery.delete({ where: { id: String(id) } })
+    await prisma.gallery.delete({ where: { id } })
     return NextResponse.json({ success: true }, { headers: noStore })
-  } catch (e:any) {
-    console.error("Gallery DELETE Error:", e.message)
-    return NextResponse.json({ error: e.message }, { status: 500, headers: noStore })
+  } catch (e: any) {
+    return NextResponse.json({ error: "Delete failed" }, { status: 500, headers: noStore })
   }
 }

@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-const fallbackFaculty = [
-  { 
-    id: "1", 
-    name: "Prof. Mubarak Ali", 
-    designation: "Principal", 
-    department: "Administration",
-    qualification: "M.A",
-    image: "",
-    order: 1 
-  }
-];
-
-const noStore = { "Cache-Control": "no-store" };
+const noStore = { "Cache-Control": "no-store, no-cache, must-revalidate" };
 
 export async function GET() {
   try {
@@ -21,9 +9,13 @@ export async function GET() {
       orderBy: { order: 'asc' } 
     });
     return NextResponse.json(data, { headers: noStore });
-  } catch (e) {
-    console.error("Faculty GET Error:", e);
-    return NextResponse.json(fallbackFaculty, { headers: noStore });
+  } catch (e: any) {
+    console.error("Faculty GET Error (Neon offline?):", e.message);
+    // ✅ Fallback mat bhejo, error bhejo taake frontend apna cache dikhaye
+    return NextResponse.json(
+      { error: "DB offline", offline: true, faculty: [] }, 
+      { status: 503, headers: noStore }
+    );
   }
 }
 
@@ -93,7 +85,6 @@ export async function DELETE(req: Request) {
     }
 
     await prisma.faculty.delete({ where: { id: String(id) } });
-
     return NextResponse.json({ success: true }, { headers: noStore });
   } catch (e: any) {
     console.error("DELETE Error:", e.message);

@@ -41,7 +41,8 @@ export async function GET() {
       headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });
   } catch {
-    return NextResponse.json(fallbackDownloads);
+    // ✅ FIX: fallback ki jagah 503 taake cache overwrite na ho
+    return NextResponse.json({ error: "DB offline", offline: true }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }
 

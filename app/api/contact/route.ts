@@ -27,7 +27,8 @@ export async function GET() {
     return NextResponse.json(data || defaultData, { headers: noStore });
   } catch (e) {
     console.error(e);
-    return NextResponse.json(defaultData, { headers: noStore });
+    // ✅ FIX: defaultData ki jagah 503 bhejo taake cache overwrite na ho
+    return NextResponse.json({ error: "DB offline", offline: true }, { status: 503, headers: noStore });
   }
 }
 
