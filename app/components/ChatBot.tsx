@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { collegeInfo, intentSynonyms, IntentKey } from "./collegeData";
 
+type Msg = { from: "bot" | "user"; text: string };
+
 function smartReply(query: string): string {
   const q = query.toLowerCase().trim();
   if (!q) return "";
@@ -34,7 +36,7 @@ function smartReply(query: string): string {
 
 export default function ChatBot() {
   const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState([{ from: "bot" as const, text: "As-salamu Alaikum! Musa College ke bare me kuch bhi puchein. 👋" }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ from: "bot", text: "As-salamu Alaikum! Musa College ke bare me kuch bhi puchein. 👋" }]);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,7 +48,7 @@ export default function ChatBot() {
     const txt = input.trim();
     if (!txt) return;
     const reply = smartReply(txt);
-    setMsgs(prev => [...prev, { from: "user" as const, text: txt }, { from: "bot" as const, text: reply }]);
+    setMsgs(prev => [...prev, { from: "user", text: txt }, { from: "bot", text: reply }]);
     setInput("");
   };
 

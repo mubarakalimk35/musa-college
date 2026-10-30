@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db" // ✅ shared prisma - connection leak khatam
+import { prisma } from "@/lib/db"
 
 const noStore = { "Cache-Control": "no-store" }
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       data: { 
         title: title.trim(), 
         category: category?.trim() || "General", 
-        imageUrl: imageUrl.trim() 
+        image: imageUrl.trim() // ✅ FIX: schema me 'image' hai, 'imageUrl' nahi
       }
     })
     return NextResponse.json(newImage, { headers: noStore })
