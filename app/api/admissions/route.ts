@@ -38,7 +38,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    await prisma.$queryRaw`INSERT INTO "admissions" ("program","studentName","fatherName","dob","cnic","religion","nationality","domicile","mobile","address","status","createdAt") VALUES (${program}, ${studentName}, ${fatherName}, ${dob}, ${String(cnic)}, ${religion}, ${nationality}, ${domicile}, ${String(mobile)}, ${address}, 'PENDING', ${new Date().toISOString()})`;
+    // ✅ FIX: dob text (16/11/2026) ko Date me convert karo
+    let parsedDob: Date | null = null;
+    if (dob) {
+      if (typeof dob === 'string' && dob.includes('/')) {
+        const [d, m, y] = dob.split('/');
+        parsedDob = new Date(`${y}-${m}-${d}`);
+      } else {
+        parsedDob = new Date(dob);
+      }
+    }
+
+    await prisma.$queryRaw`INSERT INTO "admissions" ("program","studentName","fatherName","dob","cnic","religion","nationality","domicile","mobile","address","status","createdAt") VALUES (${program}, ${studentName}, ${fatherName}, ${parsedDob}, ${String(cnic)}, ${religion}, ${nationality}, ${domicile}, ${String(mobile)}, ${address}, 'PENDING', ${new Date()})`;
     return NextResponse.json({ success: true });
   } catch (e: any) {
     console.error(e);
