@@ -15,12 +15,11 @@ function getQueue(): QueueItem[] {
   try {
     return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
   } catch {
-    return []; // FIX: Corrupt queue se crash nahi
+    return [];
   }
 }
 
 function saveQueue(queue: QueueItem[]) {
-  // FIX: Max 50 items taake localStorage full na ho
   const trimmed = queue.slice(-50);
   localStorage.setItem(QUEUE_KEY, JSON.stringify(trimmed));
 }
@@ -37,18 +36,17 @@ function updateCacheForOffline(url: string, data: any, method: string) {
     } else if (data._method === "DELETE" || method === "DELETE") {
       const id = data.id || data._id;
       if (id) {
-        const filtered = existing.filter((i: any) => i.id !== id);
+        const filtered = existing.filter((i: any) => String(i.id) !== String(id));
         localStorage.setItem(cacheKey, JSON.stringify(filtered));
       }
     } else if (data._method === "PATCH" && data.id) {
-      const updated = existing.map((i: any) => i.id === data.id ? { ...i, ...data } : i);
+      const updated = existing.map((i: any) => String(i.id) === String(data.id) ? { ...i, ...data } : i);
       localStorage.setItem(cacheKey, JSON.stringify(updated));
     }
   } catch {}
 }
 
 export async function offlineRequest(url: string, data: any, method: "POST" | "DELETE" | "PUT" | "PATCH" = "POST") {
-  // 1. Offline hai to seedha queue me
   if (typeof window !== "undefined" && !navigator.onLine) {
     const queue = getQueue();
     queue.push({ url, method, data, time: Date.now() });
@@ -82,10 +80,14 @@ export async function offlineRequest(url: string, data: any, method: "POST" | "D
     if (!res.ok) throw new Error("Server error");
     
     const json = await res.json().catch(() => ({}));
+    
+    // --- YEH FIX HAI ---
+    // Online delete/update hua to cache se bhi delete karo
+    updateCacheForOffline(url, { ...finalData, _method: finalMethod }, finalMethod);
+    
     return { ok: true, offline: false, data: json, json: async () => json } as any;
 
   } catch (e) {
-    // 2. Net fail hua to bhi queue me - yehi aapka 19 pending wala logic hai
     const queue = getQueue();
     queue.push({ url, method, data, time: Date.now() });
     saveQueue(queue);
@@ -98,9 +100,8 @@ export const offlinePost = (url: string, data: any) => offlineRequest(url, data,
 export const offlineDelete = (url: string, data: any) => offlineRequest(url, { ...data, _method: "DELETE" }, "POST");
 export const offlinePatch = (url: string, data: any) => offlineRequest(url, { ...data, _method: "PATCH" }, "POST");
 
-// --- SYNC ON ONLINE ---
 if (typeof window !== "undefined") {
-  let isSyncing = false; // FIX: Double sync se bachao
+  let isSyncing = false;
   
   window.addEventListener("online", async () => {
     if (isSyncing) return;
@@ -108,7 +109,6 @@ if (typeof window !== "undefined") {
     if (queue.length === 0) return;
 
     isSyncing = true;
-    console.log(`Syncing ${queue.length} offline items...`);
     let success = 0;
     const remaining: QueueItem[] = [];
 
@@ -135,7 +135,11 @@ if (typeof window !== "undefined") {
           body: isDeleteWithQuery ? undefined : JSON.stringify(finalData),
         });
         
-        if (res.ok) success++;
+        if (res.ok) {
+          success++;
+          // Sync success pe bhi cache update
+          updateCacheForOffline(item.url, { ...finalData, _method: finalMethod }, finalMethod);
+        }
         else remaining.push(item);
 
       } catch {
@@ -146,9 +150,7 @@ if (typeof window !== "undefined") {
     saveQueue(remaining);
     isSyncing = false;
     if (success > 0) {
-      console.log(`${success} items synced to Neon`);
       window.dispatchEvent(new Event("offline-sync-done"));
-      // Page reload karo taake fresh data aaye
       window.location.reload();
     }
   });

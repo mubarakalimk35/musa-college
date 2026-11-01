@@ -7,14 +7,8 @@ export default function NoticeTicker() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const fallbackNotices = [
-    "Admissions Open 2025-26 for BS Programs — Apply Now",
-    "Last Date for Form Submission: 30 May 2025",
-    "Entry Test Schedule Announced",
-    "Merit List will be displayed on 5th June 2025",
-  ];
-
-  const [notices, setNotices] = useState<string[]>(fallbackNotices);
+  const [notices, setNotices] = useState<string[]>([]); // FIX: Khali start karo, fallback nahi
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/news", { cache: "no-store" })
@@ -25,13 +19,19 @@ export default function NoticeTicker() {
           const tickerItems = list.filter((n: any) => n.isTicker === true);
           const finalList = tickerItems.length > 0 ? tickerItems : list;
           const titles = finalList.map((n: any) => n.title).filter(Boolean).slice(0, 20);
-          if (titles.length > 0) setNotices(titles);
+          setNotices(titles); // chahe khali ho ya bhara
+        } else {
+          setNotices([]); // FIX: Sab delete hua to khali kar do
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setNotices([]); // error pe bhi khali, purana fallback nahi
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const goToNews = () => {
+    // ... aapka same code
     const possibleIds = ["newsandevents", "news", "news-events"];
     const doScroll = () => {
       for (const id of possibleIds) {
@@ -51,6 +51,11 @@ export default function NoticeTicker() {
       doScroll();
     }
   };
+
+  // FIX: Agar koi notice nahi hai to ticker dikhao hi mat
+  if (!loading && notices.length === 0) {
+    return null;
+  }
 
   return (
     <div className="w-full bg-white border-y border-slate-200 shadow-sm sticky top-0 md:top-0 z-30">
