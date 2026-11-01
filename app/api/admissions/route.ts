@@ -16,7 +16,6 @@ export async function GET() {
     return NextResponse.json(safe, { headers: noStore });
   } catch (e: any) {
     console.error("Admission GET Error:", e.message);
-    // ✅ FIX: [] ki jagah 503 bhejo taake cache overwrite na ho
     return NextResponse.json({ error: "DB offline", offline: true }, { status: 503, headers: noStore });
   }
 }
@@ -25,7 +24,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    // --- IMPORTANT: offlineSync support - _method PATCH/DELETE ko handle karo ---
     if (body._method === "PATCH") {
       return handlePatch(body.id, body.status);
     }
@@ -49,7 +47,9 @@ export async function POST(req: Request) {
       }
     }
 
-    await prisma.$queryRaw`INSERT INTO "admissions" ("program","studentName","fatherName","dob","cnic","religion","nationality","domicile","mobile","address","status","createdAt") VALUES (${program}, ${studentName}, ${fatherName}, ${parsedDob}, ${String(cnic)}, ${religion}, ${nationality}, ${domicile}, ${String(mobile)}, ${address}, 'PENDING', ${new Date()})`;
+    const now = new Date();
+
+    await prisma.$queryRaw`INSERT INTO "admissions" ("program","studentName","fatherName","dob","cnic","religion","nationality","domicile","mobile","address","status","createdAt","updatedAt") VALUES (${program}, ${studentName}, ${fatherName}, ${parsedDob}, ${String(cnic)}, ${religion}, ${nationality}, ${domicile}, ${String(mobile)}, ${address}, 'PENDING', ${now}, ${now})`;
     return NextResponse.json({ success: true });
   } catch (e: any) {
     console.error(e);
@@ -57,12 +57,11 @@ export async function POST(req: Request) {
   }
 }
 
-// Helper for PATCH - body + query both support
 async function handlePatch(id: any, status: any) {
   if(!id || !status) return NextResponse.json({ error: "Missing id/status" }, { status: 400 });
   const allowed = ['PENDING','APPROVED','REJECTED'];
   if(!allowed.includes(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  await prisma.$queryRaw`UPDATE "admissions" SET "status" = ${status} WHERE id = ${Number(id)}`;
+  await prisma.$queryRaw`UPDATE "admissions" SET "status" = ${status}, "updatedAt" = ${new Date()} WHERE id = ${Number(id)}`;
   return NextResponse.json({ success: true });
 }
 
@@ -85,7 +84,6 @@ export async function DELETE(req: Request) {
   try {
     const url = new URL(req.url);
     let id = url.searchParams.get("id");
-    // body se bhi try karo - offlinePost ke liye
     if(!id) {
       try { const b = await req.json(); id = b.id; } catch {}
     }
