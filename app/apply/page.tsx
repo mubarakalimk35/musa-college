@@ -8,44 +8,39 @@ export default function ApplyPage() {
   const [cnicError, setCnicError] = useState("");
   const dateRef = useRef<HTMLInputElement>(null);
 
-  const initialForm = {
-    program: "", studentName: "", fatherName: "", dob: "", // dob ISO me rakhenge
+  // Form data ko Ref me rakhenge taake typing pe re-render na ho
+  const formRef = useRef({
+    program: "", studentName: "", fatherName: "", dob: "",
     cnic: "", religion: "", nationality: "Pakistani", domicile: "", mobile: "", address: ""
-  };
-  const [formData, setFormData] = useState(initialForm);
-  const [displayDob, setDisplayDob] = useState(""); // user ko DD/MM/YYYY dikhega
+  });
 
-  const handleChange = (e: any) => {
-    const { name, value } = e.target;
-    // Mobile only digits + dash allow
-    if(name==="mobile"){
-      const v = value.replace(/[^0-9-]/g,"").slice(0,12);
-      setFormData({ ...formData, [name]: v });
-      return;
-    }
-    setFormData({ ...formData, [name]: value });
-  };
+  const [displayDob, setDisplayDob] = useState("");
 
   const handleDobChange = (e: any) => {
-    const iso = e.target.value; // YYYY-MM-DD
+    const iso = e.target.value;
     if (iso) {
       const [y, m, d] = iso.split("-");
-      setFormData({ ...formData, dob: iso }); // DB me ISO save
-      setDisplayDob(`${d}/${m}/${y}`); // Display me DD/MM/YYYY
+      formRef.current.dob = iso;
+      setDisplayDob(`${d}/${m}/${y}`);
     }
   };
 
   const handleCnicChange = (e: any) => {
-    const val = e.target.value.replace(/\D/g, "").slice(0,13);
-    setFormData({ ...formData, cnic: val });
+    const val = e.target.value.replace(/\D/g, "").slice(0, 13);
+    formRef.current.cnic = val;
+    e.target.value = val; // uncontrolled me direct value set
     setCnicError(val.length === 13 || val.length === 0 ? "" : "CNIC must be 13 digits");
   };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    const formData = formRef.current;
+    
     if (formData.cnic.length !== 13) { setCnicError("CNIC must be 13 digits"); return; }
     if (!formData.dob) { alert("Please select Date of Birth"); return; }
     if (formData.mobile.length < 11) { alert("Enter valid Mobile No"); return; }
+    if (!formData.program) { alert("Select Program"); return; }
+
     setLoading(true);
     try {
       const res = await fetch("/api/admissions", { 
@@ -57,8 +52,12 @@ export default function ApplyPage() {
       const result = await res.json();
       if (res.ok && result.success) {
         setSubmitted(true);
-        setFormData(initialForm);
+        formRef.current = {
+          program: "", studentName: "", fatherName: "", dob: "",
+          cnic: "", religion: "", nationality: "Pakistani", domicile: "", mobile: "", address: ""
+        };
         setDisplayDob("");
+        e.target.reset();
       } else {
         alert("Failed: " + (result.error || "Try again"));
       }
@@ -93,14 +92,14 @@ export default function ApplyPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-[13px] font-black text-gray-900">Program *</label>
-                <select name="program" value={formData.program} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl bg-white text-[15px] font-semibold outline-none focus:border-blue-600">
+                <select name="program" defaultValue="" onChange={(e)=> formRef.current.program = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl bg-white text-[15px] font-semibold outline-none focus:border-blue-600">
                   <option value="">Select Program</option>
                   <option>FSc Pre-Medical</option><option>FSc Pre-Engineering</option><option>FA</option><option>ICS</option>
                   <option>BS Computer Science</option><option>BS English</option><option>BS Physics</option><option>BS Mathematics</option><option>BS Zoology</option><option>BS Economics</option><option>BS Microbiology</option>
                 </select>
               </div>
-              <div><label className="text-[13px] font-black text-gray-900">Student Name *</label><input name="studentName" value={formData.studentName} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Full Name" /></div>
-              <div><label className="text-[13px] font-black text-gray-900">Father's Name *</label><input name="fatherName" value={formData.fatherName} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Father's Name" /></div>
+              <div><label className="text-[13px] font-black text-gray-900">Student Name *</label><input name="studentName" defaultValue="" onChange={(e)=> formRef.current.studentName = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Full Name" /></div>
+              <div><label className="text-[13px] font-black text-gray-900">Father's Name *</label><input name="fatherName" defaultValue="" onChange={(e)=> formRef.current.fatherName = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Father's Name" /></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -112,19 +111,19 @@ export default function ApplyPage() {
                   <input ref={dateRef} type="date" onChange={handleDobChange} className="absolute opacity-0 pointer-events-none w-0 h-0" />
                 </div>
               </div>
-              <div><label className="text-[13px] font-black text-gray-900">CNIC *</label><input name="cnic" required value={formData.cnic} onChange={handleCnicChange} className={`w-full mt-2 border-2 p-3.5 rounded-xl text-[15px] font-bold outline-none ${cnicError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-600'}`} placeholder="5440012345678" maxLength={13} />{cnicError && <p className="text-[12px] text-red-600 mt-1 font-bold">{cnicError}</p>}</div>
-              <div><label className="text-[13px] font-black text-gray-900">Religion *</label><select name="religion" value={formData.religion} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl bg-white text-[15px] font-medium outline-none focus:border-blue-600"><option value="">Select</option><option>Islam</option><option>Christianity</option><option>Hinduism</option><option>Other</option></select></div>
+              <div><label className="text-[13px] font-black text-gray-900">CNIC *</label><input name="cnic" required defaultValue="" onChange={handleCnicChange} className={`w-full mt-2 border-2 p-3.5 rounded-xl text-[15px] font-bold outline-none ${cnicError ? 'border-red-500' : 'border-gray-300 focus:border-blue-600'}`} placeholder="5440012345678" maxLength={13} />{cnicError && <p className="text-[12px] text-red-600 mt-1 font-bold">{cnicError}</p>}</div>
+              <div><label className="text-[13px] font-black text-gray-900">Religion *</label><select name="religion" defaultValue="" onChange={(e)=> formRef.current.religion = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl bg-white text-[15px] font-medium outline-none focus:border-blue-600"><option value="">Select</option><option>Islam</option><option>Christianity</option><option>Hinduism</option><option>Other</option></select></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div><label className="text-[13px] font-black text-gray-900">Nationality *</label><input name="nationality" value={formData.nationality} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" /></div>
-              <div><label className="text-[13px] font-black text-gray-900">Local/Domicile *</label><input name="domicile" value={formData.domicile} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Quetta" /></div>
-              <div><label className="text-[13px] font-black text-gray-900">Mobile No *</label><input name="mobile" value={formData.mobile} onChange={handleChange} required type="tel" className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="03XX-XXXXXXX" /></div>
+              <div><label className="text-[13px] font-black text-gray-900">Nationality *</label><input name="nationality" defaultValue="Pakistani" onChange={(e)=> formRef.current.nationality = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" /></div>
+              <div><label className="text-[13px] font-black text-gray-900">Local/Domicile *</label><input name="domicile" defaultValue="" onChange={(e)=> formRef.current.domicile = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="Quetta" /></div>
+              <div><label className="text-[13px] font-black text-gray-900">Mobile No *</label><input name="mobile" defaultValue="" onChange={(e)=> { const v = e.target.value.replace(/[^0-9-]/g,"").slice(0,12); e.target.value=v; formRef.current.mobile=v; }} required type="tel" className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" placeholder="03XX-XXXXXXX" /></div>
             </div>
 
-            <div><label className="text-[13px] font-black text-gray-900">Complete Address *</label><textarea name="address" value={formData.address} onChange={handleChange} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" rows={2} placeholder="House No, Street, Town, City"></textarea></div>
+            <div><label className="text-[13px] font-black text-gray-900">Complete Address *</label><textarea name="address" defaultValue="" onChange={(e)=> formRef.current.address = e.target.value} required className="w-full mt-2 border-2 border-gray-300 p-3.5 rounded-xl text-[15px] font-medium outline-none focus:border-blue-600" rows={2} placeholder="House No, Street, Town, City"></textarea></div>
             
-            <button type="submit" disabled={loading} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black text-[16px] shadow-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed">{loading ? "Submitting..." : "Submit Application"}</button>
+            <button type="submit" disabled={loading} className="w-full bg-blue-700 text-white py-4 rounded-xl font-black text-[16px] shadow-lg hover:bg-blue-800 disabled:opacity-50">{loading ? "Submitting..." : "Submit Application"}</button>
           </form>
         </div>
       </div>

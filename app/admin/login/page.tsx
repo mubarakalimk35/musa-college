@@ -13,17 +13,24 @@ export default function AdminLogin() {
     setError("");
     setLoading(true);
 
-    // Thoda delay - brute force slow
-    await new Promise(r => setTimeout(r, 600));
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
 
-    if (password === "Musa@123") {
-      localStorage.setItem("isAdminLoggedIn", "true");
-      localStorage.setItem("adminLoginTime", Date.now().toString());
-      router.push("/admin");
-    } else {
-      setError("Wrong Password!");
-      setPassword("");
+      if (res.ok) {
+        router.push("/admin");
+        router.refresh(); // cookie set hone ke liye zaruri hai
+      } else {
+        setError("Wrong Password!");
+        setPassword("");
+      }
+    } catch (err) {
+      setError("Something went wrong!");
     }
+    
     setLoading(false);
   };
 
